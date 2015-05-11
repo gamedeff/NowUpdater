@@ -1,0 +1,3 @@
+[submodule "libs/anitomy"]
+	path = libs/anitomy
+	url = https://github.com/gamedeff/anitomy.git
