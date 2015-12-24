@@ -162,6 +162,8 @@ struct site_info_t
 
 	http_session_t *http;
 
+	std::vector<imdb_list_t> imdb_lists;
+
 	//site_info_t(std::string site) : http(site) {}
 
 	bool authenticate(site_user_info_t &site_user);
@@ -268,6 +270,8 @@ struct site_info_t
 	std::string imdb_get_auth_token(const std::string &imdb_title_id);
 
 	bool send_request_get_title_rating_imdb(site_user_info_t &site_user, const title_info_t &title, float &rating);
+
+	bool send_request_change_title_status_imdb(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
 
 	bool send_request_change_title_rating_imdb(site_user_info_t &site_user, const title_info_t &title, float rating);
 	bool send_request_change_title_rating_imdb_ajax(site_user_info_t &site_user, const title_info_t &title, float rating);
