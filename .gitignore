@@ -17,3 +17,7 @@ UpgradeLog.XML
 imgui.ini
 *.lib
 *.vsp
+__test*.bat
+*list_*.xml.gz
+bin/*/*.dll
+bin/*/*.exe
