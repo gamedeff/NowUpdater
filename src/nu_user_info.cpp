@@ -717,6 +717,14 @@ user_info_t::user_info_t(const std::string &username, const std::string &passwor
 
 	imdb_com.color = ImVec4(0.6f, 0.0f, 0.6f, 1.0f);
 
+	imdb_list_t imdb_lists[] = 
+	{
+		{ "ratings",   "", "RATINGS",   NU_TITLE_STATUS_WATCHED },
+		{ "watchlist", "", "WATCHLIST", NU_TITLE_STATUS_PLAN_TO_WATCH }
+	};
+
+	imdb_com.imdb_lists.assign(imdb_lists, imdb_lists + countof(imdb_lists));
+
 	sites.push_back(anime_planet_com);
 
 	sites.push_back(myanimelist);
@@ -744,7 +752,7 @@ user_info_t::user_info_t(const std::string &username, const std::string &passwor
 	NU_FUNC_IMDB(parse_title_info);
 	NU_FUNC_IMDB(sync);
 	//NU_FUNC_IMDB(send_request_change_title_episodes_watched_num);
-	//NU_FUNC_IMDB(send_request_change_title_status);
+	NU_FUNC_IMDB(send_request_change_title_status);
 	NU_FUNC_IMDB(send_request_change_title_rating);
 	NU_FUNC_IMDB(send_request_add_title);
 	NU_FUNC_IMDB(send_request_delete_title);
@@ -1146,7 +1154,6 @@ struct ImGuiColumn
 static bool Items_TitleGetter(void* data, int idx, const char** out_text)
 {
 	static char search_str_fmt[64] = "%s (%d)";
-	static char search_str[512] = "";
 
 	std::vector<title_info_t>::const_iterator *pitems_it = (std::vector<title_info_t>::const_iterator *) data;
 	if(out_text)
@@ -1154,8 +1161,7 @@ static bool Items_TitleGetter(void* data, int idx, const char** out_text)
 		std::vector<title_info_t>::const_iterator items_it = (*pitems_it) + idx;
 
 		//*out_text = items_it->name.c_str();
-		sprintf_s(search_str, search_str_fmt, items_it->name.c_str(), items_it->year);
-		*out_text = search_str;
+		*out_text = _FS_narrow(search_str_fmt, items_it->name.c_str(), items_it->year);
 	}
 	return true;
 }
@@ -1779,264 +1785,6 @@ bool user_info_t::sync(uint32_t i, uint32_t k)
 	{
 		//return sites[site_users[i].site_index].sync(username, password, site_users[k]);
 		return sites[site_users[i].site_index].sync(username, password, site_users[i]);
-//		pugi::xml_document doc;
-//
-//		if(!load_xhtml(doc, sites[current_site].http->send_form(HTTPRequest::HTTP_POST, sites[current_site].login_uri, username, password, sites[current_site].login_cookie)))
-//			return false;
-//
-//		pugi::xml_node node = doc.select_node(sites[current_site].parser_info.titlelist_uri.xpath.c_str()).node();
-//
-//		uint32_t prev_added_titles_num = 0;
-//
-//		while(node)
-//		{
-//			tcout << node.name() << std::endl;
-//
-//			std::string titlelist_uri = node.attribute("href").value();
-//
-//			std::cout << titlelist_uri << std::endl;
-//
-//			if(!load_xhtml(doc, sites[current_site].http->redirect_to(titlelist_uri, sites[current_site].login_cookie)))
-//				return false;
-//
-//			const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].parser_info.titlelist_titles.xpath.c_str());
-//
-//			std::vector<title_info_t> site_titles;
-//
-//			for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//			{
-//				pugi::xml_node node = it->node();
-//
-//				title_info_t title; //{ node.first_child().value(), node.attribute("href").value() };
-//				user_title_info_t user_title = { 0 };
-//
-//				user_title.index = sites[current_site].titles.size();
-//
-//				if(!parse_title_and_user_title_info(node.first_child().value(), node.attribute("href").value(), title, user_title))
-//					return false;
-//
-//				site_titles.push_back(title);
-//
-//				std::vector<title_info_t>::const_iterator title_it = std::find_if(sites[current_site].titles.begin(), sites[current_site].titles.end(), std::bind2nd(compare_by_name<title_info_t>(), title));
-//
-//				if(title_it != sites[current_site].titles.end())
-//				{
-//					user_title.index = title_it - sites[current_site].titles.begin();
-//					sites[current_site].titles[user_title.index] = title;
-//				}
-//				else
-//				{
-//					sites[current_site].titles.push_back(title);
-//				}
-//
-//				std::vector<user_title_info_t>::const_iterator user_title_it = std::find_if(titles.begin(), titles.end(), std::bind2nd(compare_by_index<user_title_info_t>(), user_title));
-//
-//				if(user_title_it != titles.end())
-//				{
-//				}
-//				else
-//				{
-//					titles.push_back(user_title);
-//					++prev_added_titles_num;
-//				}
-//			}
-//
-//			for(int i = 0; i < titles.size(); ++i)
-//			{
-//				std::vector<title_info_t>::const_iterator title_it = std::find_if(site_titles.begin(), site_titles.end(), std::bind2nd(compare_by_name<title_info_t>(), sites[current_site].titles[titles[i].index]));
-//
-//				bool found = title_it != site_titles.end();
-//
-//				if(!found)
-//					remove_title(i);
-//			}
-//
-//#if 0
-//			{
-//				uint32_t i = prev_added_titles_num;
-//				const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].titlelist_type_xpath.c_str());
-//
-//				for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//				{
-//					pugi::xml_node node = it->node();
-//
-//					std::string title_type_str = node.value();
-//
-//					for(std::vector<std::string>::const_iterator title_type_it = sites[current_site].title_types.begin(); title_type_it != sites[current_site].title_types.end(); ++title_type_it)
-//						if(title_type_str.find(*title_type_it) != std::string::npos)
-//						{
-//							sites[current_site].titles[title_names[i]].type = title_type_it - sites[current_site].title_types.begin();
-//
-//							std::cout << title_names[i] << "(" << sites[current_site].title_types[sites[current_site].titles[title_names[i]].type] << ")" << std::endl;
-//
-//							break;
-//						}
-//
-//						++i;
-//				}
-//			}
-//
-//			{
-//				uint32_t i = prev_added_titles_num;
-//				const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].titlelist_year_xpath.c_str());
-//
-//				for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//				{
-//					pugi::xml_node node = it->node();
-//
-//					uint32_t title_year = atoi(node.value());
-//
-//					sites[current_site].titles[title_names[i]].year = title_year;
-//
-//					std::cout << title_names[i] << "(" << sites[current_site].titles[title_names[i]].year << ")" << std::endl;
-//
-//					++i;
-//				}
-//			}
-//
-//			{
-//				uint32_t i = prev_added_titles_num;
-//				const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].titlelist_average_rating_xpath.c_str());
-//
-//				for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//				{
-//					pugi::xml_node node = it->node();
-//
-//					float average_rating = atof(node.value());
-//
-//					sites[current_site].titles[title_names[i]].average_rating = average_rating;
-//
-//					std::cout << title_names[i] << "(" << sites[current_site].titles[title_names[i]].average_rating << ")" << std::endl;
-//
-//					++i;
-//				}
-//			}
-//
-//			{
-//				uint32_t i = prev_added_titles_num;
-//				const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].titlelist_status_xpath.c_str());
-//
-//				for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//				{
-//					pugi::xml_node node = it->node();
-//
-//					std::string title_status_str = node.value();
-//
-//					std::vector<std::string>::const_iterator title_status_it = std::find(sites[current_site].title_statuses.begin(), sites[current_site].title_statuses.end(), title_status_str);
-//
-//					if(title_status_it != sites[current_site].title_statuses.end())
-//					{
-//						titles[title_names[i]].status = title_status_it - sites[current_site].title_statuses.begin();
-//
-//						std::cout << title_names[i] << "(" << sites[current_site].title_statuses[titles[title_names[i]].status] << ")" << std::endl;
-//					}
-//
-//					++i;
-//				}
-//			}
-//
-//			{
-//				uint32_t i = prev_added_titles_num;
-//				const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].titlelist_episodes_watched_xpath.c_str());
-//
-//				for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//				{
-//					pugi::xml_node node = it->node();
-//
-//					uint32_t episodes_watched = atoi(node.value());
-//
-//					if(episodes_watched > 0)
-//					{
-//						while(titles[title_names[i]].status == NU_TITLE_STATUS_NOT_ADDED || titles[title_names[i]].status == NU_TITLE_STATUS_PLAN_TO_WATCH)
-//						{
-//							++i;
-//							assert(i < title_names.size());
-//						}
-//
-//						titles[title_names[i]].episodes_watched_num = episodes_watched;
-//
-//						std::cout << title_names[i] << "(" << titles[title_names[i]].episodes_watched_num << ")" << std::endl;
-//					}
-//
-//					++i;
-//				}
-//			}
-//
-//			{
-//				uint32_t i = prev_added_titles_num;
-//				const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].titlelist_times_watched_xpath.c_str());
-//
-//				for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//				{
-//					pugi::xml_node node = it->node();
-//
-//					uint32_t times_watched = atoi(node.value());
-//
-//					if(times_watched > 0)
-//					{
-//						while(titles[title_names[i]].status == NU_TITLE_STATUS_NOT_ADDED || titles[title_names[i]].status == NU_TITLE_STATUS_PLAN_TO_WATCH)
-//						{
-//							++i;
-//							assert(i < title_names.size());
-//						}
-//
-//						titles[title_names[i]].times_watched_num = times_watched;
-//
-//						std::cout << title_names[i] << "(" << titles[title_names[i]].times_watched_num << ")" << std::endl;
-//					}
-//
-//					++i;
-//				}
-//			}
-//
-//			{
-//				uint32_t i = prev_added_titles_num;
-//				const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].titlelist_rating_xpath.c_str());
-//
-//				for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//				{
-//					pugi::xml_node node = it->node();
-//
-//					uint32_t rating = atof(node.value()) * sites[current_site].rating_mulcoef;
-//
-//					while(titles[title_names[i]].status == NU_TITLE_STATUS_NOT_ADDED || titles[title_names[i]].status == NU_TITLE_STATUS_PLAN_TO_WATCH)
-//					{
-//						++i;
-//						assert(i < title_names.size());
-//					}
-//
-//					titles[title_names[i]].rating = rating;
-//
-//					std::cout << title_names[i] << "(" << titles[title_names[i]].rating << ")" << std::endl;
-//
-//					++i;
-//				}
-//			}
-//
-//			{
-//				uint32_t i = prev_added_titles_num;
-//				const pugi::xpath_node_set nodes = doc.select_nodes(sites[current_site].titlelist_episodes_num_xpath.c_str());
-//
-//				for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-//				{
-//					pugi::xml_node node = it->node();
-//
-//					uint32_t episodes_num = atoi(node.value());
-//
-//					sites[current_site].titles[title_names[i]].episodes_num = episodes_num;
-//
-//					std::cout << title_names[i] << "(" << sites[current_site].titles[title_names[i]].episodes_num << ")" << std::endl;
-//
-//					++i;
-//				}
-//			}
-//#endif
-//			//prev_added_titles_num = titles.size();
-//
-//			node = doc.select_node(sites[current_site].parser_info.titlelist_next_page_uri.xpath.c_str()).node();
-//		}
-//
-//		return true;
 	}
 	catch(Exception& exc)
 	{
