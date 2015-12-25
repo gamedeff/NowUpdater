@@ -106,7 +106,7 @@ struct user_info_t
 	//std::vector<user_title_info_t> user_titles;
 	std::vector<site_user_info_t> site_users;
 
-	std::vector<site_info_t> sites;
+	std::vector<site_info_t *> sites;
 	uint32_t current_site;
 
 	std::vector<nu_mediaplayer> mediaplayers;

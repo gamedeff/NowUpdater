@@ -129,14 +129,6 @@ struct site_parser_info_t
 };
 
 //-----------------------------------------------------------------------------------
-struct imdb_list_t
-{
-	std::string name;
-	std::string list_id, list_class;
-
-	uint32_t status;
-};
-//-----------------------------------------------------------------------------------
 struct user_title_info_t;
 struct site_user_info_t;
 
@@ -162,60 +154,28 @@ struct site_info_t
 
 	http_session_t *http;
 
-	std::vector<imdb_list_t> imdb_lists;
+	virtual ~site_info_t();
 
-	//site_info_t(std::string site) : http(site) {}
-
-	bool authenticate(site_user_info_t &site_user);
-
-	bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user);
-
-	bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
-
-	bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
-
-	bool send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating);
-
-	bool send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
-
-	bool send_request_delete_title(site_user_info_t &site_user, const title_info_t &title);
+	virtual bool parse_title_info_by_id(site_user_info_t &site_user, title_info_t &title);
 
 
-	Closure<bool(site_user_info_t &site_user)> authenticate_func;
+	virtual bool authenticate(site_user_info_t &site_user) = 0;
 
-	bool authenticate_mal(site_user_info_t &site_user);
+	virtual bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user) = 0;
 
-	Closure<bool(const std::string &username, const std::string &password, site_user_info_t &site_user)> sync_func;
+	virtual bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num) = 0;
 
-	bool sync_mal(const std::string &username, const std::string &password, site_user_info_t &site_user);
+	virtual bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status) = 0;
 
-	bool import_mal(const std::string &xml_str, site_user_info_t &site_user);
-	bool import_mal(pugi::xml_node &xml_doc_node, site_user_info_t &site_user);
+	virtual bool send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating) = 0;
 
-	Closure<bool(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num)> send_request_change_title_episodes_watched_num_func;
+	virtual bool send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH) = 0;
 
-	bool send_request_change_title_episodes_watched_num_mal(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
+	virtual bool send_request_delete_title(site_user_info_t &site_user, const title_info_t &title) = 0;
 
-	Closure<bool(site_user_info_t &site_user, const title_info_t &title, uint32_t status)> send_request_change_title_status_func;
+	virtual bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles) = 0;
 
-	bool send_request_change_title_status_mal(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
-
-	Closure<bool(site_user_info_t &site_user, const title_info_t &title, float rating)> send_request_change_title_rating_func;
-
-	bool send_request_change_title_rating_mal(site_user_info_t &site_user, const title_info_t &title, float rating);
-
-	Closure<bool(site_user_info_t &site_user, const title_info_t &title, uint32_t status)> send_request_add_title_func;
-
-	bool send_request_add_title_mal(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
-
-	Closure<bool(site_user_info_t &site_user, const title_info_t &title)> send_request_delete_title_func;
-
-	bool send_request_delete_title_mal(site_user_info_t &site_user, const title_info_t &title);
-
-	Closure<bool(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles)> send_request_search_title_func;
-
-	bool send_request_search_title_mal(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
-
+	virtual bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title) = 0;
 
 	bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, uint32_t i, uint32_t episodes_watched_num);
 
@@ -226,9 +186,6 @@ struct site_info_t
 	bool send_request_add_title(site_user_info_t &site_user, uint32_t i, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
 
 	bool send_request_delete_title(site_user_info_t &site_user, uint32_t i);
-
-	bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
-
 
 	void remove_titles(site_user_info_t &site_user, std::vector<title_info_t> &site_titles);
 
@@ -246,52 +203,11 @@ struct site_info_t
 
 	bool parse_title_and_user_title_info(site_user_info_t &site_user, const std::string &title_uri, title_info_t &title, user_title_info_t &user_title);
 
-	bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
-
 	bool parse_user_title_info(pugi::xml_node &node, user_title_info_t &user_title);
-
-	bool parse_title_info_by_id_mal(site_user_info_t &site_user, title_info_t &title);
-
-	Closure<bool(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title)> parse_title_info_func;
-
-	bool parse_title_info_mal(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
-
-	bool parse_title_info_search_entry(pugi::xml_node &node, title_info_t &title);
-
-	bool parse_user_title_info_mal(pugi::xml_node &node, user_title_info_t &user_title);
 
 	bool parse_user_title_info(site_user_info_t &site_user, const title_info_t &title, user_title_info_t &user_title);
 
 	bool parse_user_title_info(site_user_info_t &site_user, user_title_info_t &user_title);
-
-	std::string imdb_get_title_id_str(const title_info_t &title);
-
-	std::string imdb_get_title_id(const std::string &title_name);
-	std::string imdb_get_auth_token(const std::string &imdb_title_id);
-
-	bool send_request_get_title_rating_imdb(site_user_info_t &site_user, const title_info_t &title, float &rating);
-
-	bool send_request_change_title_status_imdb(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
-
-	bool send_request_change_title_rating_imdb(site_user_info_t &site_user, const title_info_t &title, float rating);
-	bool send_request_change_title_rating_imdb_ajax(site_user_info_t &site_user, const title_info_t &title, float rating);
-
-	bool send_request_get_list_item_id_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, std::string &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key);
-	bool send_request_delete_title_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list);
-
-	bool send_request_add_title_imdb(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
-
-	bool send_request_delete_title_imdb(site_user_info_t &site_user, const title_info_t &title);
-
-	bool send_request_search_title_imdb(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
-
-	bool authenticate_imdb(site_user_info_t &site_user);
-
-	bool authenticate_imdb_with_tesseract(site_user_info_t &site_user);
-
-	bool parse_title_info_imdb(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
-
-	bool sync_imdb(const std::string &username, const std::string &password, site_user_info_t &site_user);
 
 	PUGI_SERIALIZATION_START
 	{
@@ -319,6 +235,108 @@ struct site_info_t
 		return true;
 	}
 	PUGI_SERIALIZATION_END
+};
+
+struct anime_planet_site_info_t : site_info_t
+{
+	anime_planet_site_info_t();
+
+	virtual bool authenticate(site_user_info_t &site_user);
+
+	virtual bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user);
+
+	virtual bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
+
+	virtual bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
+
+	virtual bool send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating);
+
+	virtual bool send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
+
+	virtual bool send_request_delete_title(site_user_info_t &site_user, const title_info_t &title);
+
+	virtual bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
+
+	virtual bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
+};
+
+struct myanimelist_site_info_t : site_info_t
+{
+	myanimelist_site_info_t();
+
+	bool import(const std::string &xml_str, site_user_info_t &site_user);
+	bool import(pugi::xml_node &xml_doc_node, site_user_info_t &site_user);
+
+	virtual bool parse_title_info_by_id(site_user_info_t &site_user, title_info_t &title);
+
+	bool parse_title_info_search_entry(pugi::xml_node &node, title_info_t &title);
+
+	bool parse_user_title_info(pugi::xml_node &node, user_title_info_t &user_title);
+
+	virtual bool authenticate(site_user_info_t &site_user);
+
+	virtual bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user);
+
+	virtual bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
+
+	virtual bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
+
+	virtual bool send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating);
+
+	virtual bool send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
+
+	virtual bool send_request_delete_title(site_user_info_t &site_user, const title_info_t &title);
+
+	virtual bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
+
+	virtual bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
+};
+//-----------------------------------------------------------------------------------
+struct imdb_list_t
+{
+	std::string name;
+	std::string list_id, list_class;
+
+	uint32_t status;
+};
+
+struct imdb_site_info_t : site_info_t
+{
+	std::vector<imdb_list_t> imdb_lists;
+
+	imdb_site_info_t();
+
+	std::string imdb_get_title_id_str(const title_info_t &title);
+
+	std::string imdb_get_title_id(const std::string &title_name);
+	std::string imdb_get_auth_token(const std::string &imdb_title_id);
+
+	bool send_request_get_title_rating(site_user_info_t &site_user, const title_info_t &title, float &rating);
+
+	bool send_request_change_title_rating_imdb_ajax(site_user_info_t &site_user, const title_info_t &title, float rating);
+
+	bool send_request_get_list_item_id_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, std::string &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key);
+	bool send_request_delete_title_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list);
+
+	bool authenticate_imdb_with_tesseract(site_user_info_t &site_user);
+
+	virtual bool authenticate(site_user_info_t &site_user);
+
+	virtual bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user);
+
+	virtual bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
+
+	virtual bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
+
+	virtual bool send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating);
+
+	virtual bool send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
+
+	virtual bool send_request_delete_title(site_user_info_t &site_user, const title_info_t &title);
+
+	virtual bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
+
+	virtual bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
 };
 //-----------------------------------------------------------------------------------
 #endif

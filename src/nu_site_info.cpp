@@ -151,8 +151,145 @@ bool parse(pugi::xml_node &node, const parser_entity_t &entity, float &result_va
 	return parse_f(node, entity, result_value, get_float_number);
 }
 //-----------------------------------------------------------------------------------
+site_info_t::~site_info_t()
+{
+	delete http;
+}
+//-----------------------------------------------------------------------------------
+imdb_site_info_t::imdb_site_info_t()
+{
+	name = "imdb";
+	url = "www.imdb.com";
+	login_uri = "https://secure.imdb.com/register-imdb/login";
+	// Use mobile login because it actually works
+	//login_uri = "https://secure.imdb.com/oauth/m_login?origpath=/";
+	//login_cookie = "id|sid|uu|session-id|session-id-time|cache";
+	login_cookie = "id|sid|uu|session-id|session-id-time";
 
-std::string site_info_t::imdb_get_title_id_str(const title_info_t &title)
+	site_parser_info_t imdb_parser_info = 
+	{
+		"/html[1]/body[1]/div[1]/div[2]/div[1]/div[1]/ul[1]/li[1]/a[1]",
+		"/html/body/div/div/ul[@class='nav']/li[@class='next']/a",
+
+		"//div[@class='list_item odd']/div[@class='info']/b//a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // name
+		"//div[contains(@class, 'list_item')]/div[@class='info']/b//a/@href", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // uri
+
+		"//meta[@property='og:image']/@content",
+		"//div[@class='poster']/a/img/@src",
+
+		//"//div[@class='title_wrapper']/h1[@itemprop='name']/text()", // name
+		"//h1[@itemprop='name']/text()", // name
+		//parser_entity_t("//meta[@property='og:url']/@content", "http\\:\\/\\/www\\.imdb\\.com\\/title\\/tt(\\d{7})\\/"), // id
+		parser_entity_t("//div[@class='ratings_wrapper']/div/@data-titleid", "tt(\\d+)"), // id
+		"//meta[@property='og:type']/@content", //"//div[@id='siteContainer']/@itemtype", // type
+		//parser_entity_t("//meta[@property='og:title']/@content", "\\((\\d{4})\\)"), // year
+		"//meta[@itemprop='datePublished']/@content", // year
+		"//div[@class='imdbRating']/div[@class='ratingValue']/strong/span[@itemprop='ratingValue']/text()", // average rating
+		//"//meta[@itemprop='bestRating']/@content", // best rating
+		"//span[@itemprop='bestRating']/text()", // best rating
+		"//meta[@itemprop='worstRating']/@content", // worst rating
+		parser_entity_t("//div[@class='imdbRating']/a/span[@itemprop='ratingCount']/text()", "(?:\\d|[,\\.])+"), // votes num
+		parser_entity_t("//div[@class='titleReviewBarItem'][last()]/div[@class='titleReviewBarSubItem']/div/span[@class='subText']/text()", "(?:\\d|[,\\.])+"), // rank
+		"//span[@class='bp_sub_heading']/text()", // episodes num
+		//"concat(//span[@class='bp_sub_heading']/text(), substring('1', 1 div not(//span[@class='bp_sub_heading']/text())))", // episodes num
+
+		//"//span[@itemprop='creator']/a[@itemprop='url']/span[@itemprop='name']/text()", // studio name
+		"//span[@itemtype='http:////schema.org//Organization']/a[@itemprop='url']/span[@itemprop='name']/text()", // studio name
+		"//span[@itemtype='http:////schema.org//Organization']/a[@itemprop='url']/@href", // studio uri
+
+		"//form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/div/form/select[@class='changeStatus']/option[@selected]/text()", // status
+		"//form/select[@class='episodes']/option[@selected]/text()", // episodes watched
+		"//form/select[@class='timeswatched']/option[@selected]/text()", // times watched
+		//"//div[@class='ratings_wrapper']/div[@class='inline']/div[@class='rating']/text()", // rating
+		"//div[@class='rating rating-list']/span[@class='rating-rating rating-your']/span[@class='value']/text()", // rating
+
+		"/html/body/div/table/tbody/tr/td[@class='tableType']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[2]",    // type
+		"/html/body/div/table/tbody/tr/td[@class='tableYear']/a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[3]/a",  // year
+		"/html/body/div/table/tbody/tr/td[@class='tableAverage']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[4]",    // average rating
+
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableStatus']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[5]",    // status
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='episodes']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableEps']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[6]"     // episodes watched
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='timeswatched']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableTimesWatched']/text()",
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/div/text()", //"/html/body/div/table/tbody/tr/td[@class='tableRating']/div/text()",
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/span[@class='totalEps']/text()",
+
+		"//ul[@class='cardDeck pure-g cd-narrow']/li/a", //"/html/body/div/div/div/table/tbody/tr/td[@class='tableTitle']/a"
+		"Mozilla/5.0 (Windows NT 6.2; rv:37.0) Gecko/20100101 Firefox/37.0"
+	};
+
+	parser_info = imdb_parser_info;
+
+	http = new http_session_t(url);
+
+	const char *IMDB_TT[] =
+	{
+		"video.other",
+		"video.tv_show",
+		"video.movie",
+		"Special",
+		"video.episode", //"OVA",
+		"Web",
+		"Music Video"
+	};
+
+	title_types.assign(IMDB_TT, IMDB_TT + countof(IMDB_TT));
+
+	const int IMDB_TT_IDS[] =
+	{
+		0,
+		1,
+		2,
+		3,
+		4,
+		5,
+		6
+	};
+
+	title_type_ids.assign(IMDB_TT_IDS, IMDB_TT_IDS + countof(IMDB_TT_IDS));
+
+	const char *IMDB_TS[] =
+	{
+		"Not added",
+		"Watched",
+		"Watching",
+		"Want to Watch",
+		"Stalled",
+		"Dropped",
+		"Won't Watch"
+	};
+
+	title_statuses.assign(IMDB_TS, IMDB_TS + countof(IMDB_TS));
+
+	const int IMDB_TS_IDS[] =
+	{
+		0,
+		1,
+		2,
+		4,
+		5,
+		3,
+		6
+	};
+
+	title_status_ids.assign(IMDB_TS_IDS, IMDB_TS_IDS + countof(IMDB_TS_IDS));
+
+	rating_mulcoef = 1;
+
+	cover_image_scale_x = 0.15f;
+	cover_image_scale_y = 0.15f;
+
+	color = ImVec4(0.6f, 0.0f, 0.6f, 1.0f);
+
+	imdb_list_t imdb_default_lists[] = 
+	{
+		{ "ratings",   "", "RATINGS",   NU_TITLE_STATUS_WATCHED },
+		{ "watchlist", "", "WATCHLIST", NU_TITLE_STATUS_PLAN_TO_WATCH }
+	};
+
+	imdb_lists.assign(imdb_default_lists, imdb_default_lists + countof(imdb_default_lists));
+}
+
+std::string imdb_site_info_t::imdb_get_title_id_str(const title_info_t &title)
 {
 	std::string imdb_title_id = std::to_string(title.id); //imdb_get_title_id(title.name);
 	assert(imdb_title_id.size() <= 7);
@@ -164,9 +301,9 @@ std::string site_info_t::imdb_get_title_id_str(const title_info_t &title)
 }
 
 
-bool site_info_t::send_request_search_title_imdb(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles)
+bool imdb_site_info_t::send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles)
 {
-	if(!authenticate_imdb(site_user))
+	if(!authenticate(site_user))
 		return false;
 
 	http->domain = "www.imdb.com";
@@ -218,7 +355,7 @@ bool site_info_t::send_request_search_title_imdb(site_user_info_t &site_user, co
 						if(!load_xhtml(doc, http->redirect_to(title.uri, login_cookie)))
 							continue; //return false;
 
-						if(parse_title_info_imdb(doc, site_user, title))
+						if(parse_title_info(doc, site_user, title))
 							found_titles.push_back(title);
 					}
 				}
@@ -229,7 +366,7 @@ bool site_info_t::send_request_search_title_imdb(site_user_info_t &site_user, co
 	return !found_titles.empty();
 }
 
-std::string site_info_t::imdb_get_title_id(const std::string &title_name)
+std::string imdb_site_info_t::imdb_get_title_id(const std::string &title_name)
 {
 	std::string title_name_encoded_str;
 	Poco::URI::encode(title_name, "", title_name_encoded_str);
@@ -268,69 +405,10 @@ std::string site_info_t::imdb_get_title_id(const std::string &title_name)
 	}
 
 	return "";
-
-	//return http->send_json_request(title.uri, json_request_str, login_cookie);
-
-	//$imdb_title = urlencode($rating['title']);
-	//$content = file_get_contents('http://www.imdb.com/xml/find?json=1&nr=1&tt=on&q='.$imdb_title);
-	//if ($content === false)
-	//{
-	//	throw new Exception('Error while fetching tconst for '.$rating['title'].'.');
-	//}
-	//$json = json_decode($content, true);
-	//if ($json === null)
-	//{
-	//	throw new Exception('Could not decode json result for '.$rating['title'].'.');
-	//}
-	//// title_popular, title_exact, title_approx
-	//// TODO: If we fail to find the exact title, try the next category until we've gone through them all
-	//if (array_key_exists('title_popular', $json))
-	//{
-	//	$type = 'title_popular';
-	//}
-	//else if (array_key_exists('title_exact', $json))
-	//{
-	//	$type = 'title_exact';
-	//}
-	//else if (array_key_exists('title_approx', $json))
-	//{
-	//	$type = 'title_approx';
-	//}
-	//else
-	//{
-	//	continue;
-	//}
-	//// Check title matches
-	//$matched_title_index = -1;
-	//$i = -1;
-	//foreach ($json[$type] as $movie)
-	//{
-	//	++$i;
-	//	if ($movie['title'] === $rating['title'])
-	//	{
-	//		$matched_title_index = $i;
-	//		break;
-	//	}
-	//}
-	//if ($matched_title_index === -1)
-	//{
-	//	echo 'Non matching title ' . $rating['title'].PHP_EOL;
-	//	return null;
-	//}
-	//return $json[$type][$matched_title_index]['id'];
 }
 
-std::string site_info_t::imdb_get_auth_token(const std::string &imdb_title_id)
+std::string imdb_site_info_t::imdb_get_auth_token(const std::string &imdb_title_id)
 {
-	//login_cookie = "id";
-
-	//$cookie_details = ['id' => $this->id];
-	//$context_options = ['http' =>
-	//						[
-	//						'method' => 'GET',
-	//						'header' => 'Cookie: '.
-	//						]
-	//					];
 	pugi::xml_document doc;
 
 	if(!load_xhtml(doc, http->redirect_to("http://www.imdb.com/title/" + imdb_title_id + "/", login_cookie)))
@@ -339,16 +417,13 @@ std::string site_info_t::imdb_get_auth_token(const std::string &imdb_title_id)
 	std::string data_auth;
 	//parse(doc, parser_entity_t("//div[@class='rating rating-list']/@data-auth"), data_auth);
 	parse(doc, parser_entity_t("//input[@id='seen-config']/@data-apptoken"), data_auth);
-	//$page_content = file_get_contents($page_url, false, $context);
-	//$data_auth_begin = strpos($page_content, 'data-auth');
-	//$data_auth_end = strpos($page_content, '"', $data_auth_begin + 11);
-	//$data_auth = substr($page_content, $data_auth_begin + 11, $data_auth_end - ($data_auth_begin + 11));
+
 	return data_auth;
 }
 
-bool site_info_t::send_request_get_title_rating_imdb(site_user_info_t &site_user, const title_info_t &title, float &rating)
+bool imdb_site_info_t::send_request_get_title_rating(site_user_info_t &site_user, const title_info_t &title, float &rating)
 {
-	if(!authenticate_imdb(site_user))
+	if(!authenticate(site_user))
 		return false;
 
 	http->domain = "www.imdb.com";
@@ -413,9 +488,14 @@ bool site_info_t::send_request_get_title_rating_imdb(site_user_info_t &site_user
 }
 
 
-bool site_info_t::send_request_change_title_status_imdb(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
+bool imdb_site_info_t::send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num)
 {
-	if(!authenticate_imdb(site_user))
+	return false;
+}
+
+bool imdb_site_info_t::send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
+{
+	if(!authenticate(site_user))
 		return false;
 
 	//for(std::vector<imdb_list_t>::iterator imdb_lists_it = imdb_lists.begin(); imdb_lists_it != imdb_lists.end(); ++imdb_lists_it)
@@ -426,17 +506,9 @@ bool site_info_t::send_request_change_title_status_imdb(site_user_info_t &site_u
 	//return http->send_json_request(title.uri, json_request_str, login_cookie);
 }
 
-bool site_info_t::send_request_change_title_rating_imdb(site_user_info_t &site_user, const title_info_t &title, float rating)
+bool imdb_site_info_t::send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating)
 {
-//void submit_rating($rating, $tconst, $auth)
-
 	http->domain = "www.imdb.com";
-
-// http://www.imdb.com/ratings/_ajax/title
-// tconst = movie id (tt3123123)
-// rating = your rating on 10
-// auth = auth key to submit
-// tracking_tag = 'title-maindetails'
 
 	std::string imdb_title_id = imdb_get_title_id(title.name);
 	//std::string imdb_title_id = imdb_get_title_id_str(title);
@@ -450,49 +522,10 @@ bool site_info_t::send_request_change_title_rating_imdb(site_user_info_t &site_u
 	parse(doc, parser_entity_t("//a[contains(@href, \"vote?v=" + std::to_string(uint32_t(rating / rating_mulcoef)) + "\")]/@href"), rate_url);
 
 	return rate_url.empty() ? false : load_xhtml(doc, http->redirect_to(rate_url, login_cookie));
-
-	// other way to do it:
-	/*std::string imdb_auth_token = imdb_get_auth_token(imdb_title_id);
-
-	std::vector<string_pair_t> params;
-	//params.push_back(std::make_pair("tconst", tconst));
-	//params.push_back(std::make_pair("rating", std::to_string(uint32_t(rating / rating_mulcoef))));
-	//params.push_back(std::make_pair("auth", imdb_get_auth_token(tconst)));
-	//params.push_back(std::make_pair("tracking_tag", "title-maindetails"));
-	params.push_back(std::make_pair("caller", "tt_ov"));
-	params.push_back(std::make_pair("appToken", imdb_auth_token));
-	params.push_back(std::make_pair("titleId", imdb_title_id));
-	params.push_back(std::make_pair("action", std::to_string(uint32_t(rating / rating_mulcoef))));
-
-	std::string s;
-
-	//s = http->send_request(HTTPRequest::HTTP_POST, "/ratings/_ajax/title", params, imdb_useragent, "", "", login_cookie);
-	s = http->send_request(HTTPRequest::HTTP_POST, "/seen/_ajax/seen", "http://www.imdb.com/title/" + imdb_title_id + "/", params, parser_info.useragent, "", "", login_cookie);
-	//return s != "";
-	return s == "{}";*/
-
-	//echo 'Submitting rating for '.$rating['title'].PHP_EOL;
-	//$cookie_details = ['id' => $this->id];
-	//$imdb_rating = floor($rating['rating'] / $this->rating_base * 10);
-	//$data = ['tconst' => $tconst, 'rating' => $imdb_rating, 'auth' => $auth, 'tracking_tag' => 'title-maindetails'];
-	//$data = http_build_query($data);
-	//$context_options = ['http' =>
-	//	[
-	//		'method' => 'POST',
-	//		'header' => 'Cookie: '.http_build_cookie($cookie_details)."\r\n".
-	//		'Content-type: application/x-www-form-urlencoded'."\r\n".
-	//		'Content-Length: '.strlen($data),
-	//		'content' => $data
-	//	]
-	//];
-	//$context = stream_context_create($context_options);
-	//$page_url = 'http://www.imdb.com/ratings/_ajax/title';
-	//$page_content = file_get_contents($page_url, false, $context);
-	//echo 'Submitted to http://www.imdb.com/title/'.$tconst.PHP_EOL;
 }
 
 // other way to do it:
-bool site_info_t::send_request_change_title_rating_imdb_ajax(site_user_info_t &site_user, const title_info_t &title, float rating)
+bool imdb_site_info_t::send_request_change_title_rating_imdb_ajax(site_user_info_t &site_user, const title_info_t &title, float rating)
 {
 //void submit_rating($rating, $tconst, $auth)
 
@@ -527,7 +560,7 @@ bool site_info_t::send_request_change_title_rating_imdb_ajax(site_user_info_t &s
 }
 
 
-bool site_info_t::send_request_get_list_item_id_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, std::string &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key)
+bool imdb_site_info_t::send_request_get_list_item_id_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, std::string &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key)
 {
 	http->domain = "www.imdb.com";
 
@@ -605,7 +638,7 @@ bool site_info_t::send_request_get_list_item_id_imdb_list_ajax(site_user_info_t 
 	return imdb_watchlist_has;
 }
 
-bool site_info_t::send_request_delete_title_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list)
+bool imdb_site_info_t::send_request_delete_title_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list)
 {
 	http->domain = "www.imdb.com";
 
@@ -645,9 +678,9 @@ bool site_info_t::send_request_delete_title_imdb_list_ajax(site_user_info_t &sit
 	return false;
 }
 
-bool site_info_t::send_request_add_title_imdb(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
+bool imdb_site_info_t::send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
 {
-	if(!authenticate_imdb(site_user))
+	if(!authenticate(site_user))
 		return false;
 
 	if(status == NU_TITLE_STATUS_PLAN_TO_WATCH)
@@ -767,12 +800,12 @@ bool site_info_t::send_request_add_title_imdb(site_user_info_t &site_user, const
 	return false;
 }
 
-bool site_info_t::send_request_delete_title_imdb(site_user_info_t &site_user, const title_info_t &title)
+bool imdb_site_info_t::send_request_delete_title(site_user_info_t &site_user, const title_info_t &title)
 {
 	return send_request_change_title_rating_imdb_ajax(site_user, title, 0);
 }
 
-bool site_info_t::authenticate_imdb(site_user_info_t &site_user)
+bool imdb_site_info_t::authenticate(site_user_info_t &site_user)
 {
 	if(!site_user.login_cookies.empty())
 	{
@@ -791,7 +824,7 @@ bool site_info_t::authenticate_imdb(site_user_info_t &site_user)
 	return true;
 }
 
-bool site_info_t::authenticate_imdb_with_tesseract(site_user_info_t &site_user)
+bool imdb_site_info_t::authenticate_imdb_with_tesseract(site_user_info_t &site_user)
 {
 	http->domain = "secure.imdb.com";
 
@@ -865,7 +898,7 @@ bool site_info_t::authenticate_imdb_with_tesseract(site_user_info_t &site_user)
 //#define NU_PARSE_F(a, x, f, e)	{ bool found = parse_f(doc, parser_info.title_##x, a.x, f); if(e && !found) NU_ERROR(#a "." #x " not found at " + parser_info.title_##x.xpath); }
 #define NU_PARSE(a, x, e)       { bool found = parse(node, parser_info.title_##x, a.x);      if(e && !found) NU_ERROR(#a "." #x " not found:" + (parser_info.title_##x.xpath.empty() ? parser_info.title_##x.xpath : " at \"" + parser_info.title_##x.xpath + "\"") + (parser_info.title_##x.regexp.empty() ? parser_info.title_##x.regexp : " no match for \"" + parser_info.title_##x.regexp + "\"")); }
 
-bool site_info_t::parse_title_info_imdb(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title)
+bool imdb_site_info_t::parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title)
 {
 	NU_PARSE(title, cover_thumb_uri, true);
 	NU_PARSE(title, cover_uri, true);
@@ -912,13 +945,13 @@ bool site_info_t::parse_title_info_imdb(pugi::xml_node &node, site_user_info_t &
 	return true;
 }
 
-bool site_info_t::sync_imdb(const std::string &username, const std::string &password, site_user_info_t &site_user)
+bool imdb_site_info_t::sync(const std::string &username, const std::string &password, site_user_info_t &site_user)
 {
 	uint32_t prev_added_titles_num = 0;
 
 	std::vector<title_info_t> site_titles;
 
-	if(!authenticate_imdb(site_user))
+	if(!authenticate(site_user))
 		return false;
 
 	pugi::xml_document doc;
@@ -929,7 +962,7 @@ bool site_info_t::sync_imdb(const std::string &username, const std::string &pass
 	std::string user_page_uri;
 	parse(doc, parser_entity_t("//*[@id='navUserMenu']/p[@class='navCategory singleLine']/a/@href"), user_page_uri);
 
-	if(!authenticate_imdb(site_user))
+	if(!authenticate(site_user))
 		return false;
 
 	if(!load_xhtml(doc, http->redirect_to(user_page_uri, login_cookie)))
@@ -940,7 +973,7 @@ bool site_info_t::sync_imdb(const std::string &username, const std::string &pass
 
 	for(uint32_t i = 0; i < imdb_lists.size(); ++i)
 	{
-		if(!authenticate_imdb(site_user))
+		if(!authenticate(site_user))
 			return false;
 
 		if(!load_xhtml(doc, http->redirect_to("/user/ur" + std::to_string(site_user.id) + "/" + imdb_lists[i].name, login_cookie)))
@@ -973,7 +1006,7 @@ bool site_info_t::sync_imdb(const std::string &username, const std::string &pass
 				if(!parse_title_and_user_title_info(site_user, node_str, title, user_title))
 					return false;
 
-				if(!send_request_get_title_rating_imdb(site_user, title, user_title.rating))
+				if(!send_request_get_title_rating(site_user, title, user_title.rating))
 					return false;
 
 				user_title.episodes_watched_num = title.episodes_num;
@@ -1015,10 +1048,133 @@ bool site_info_t::sync_imdb(const std::string &username, const std::string &pass
 	return true;
 }
 
+//-----------------------------------------------------------------------------------
+myanimelist_site_info_t::myanimelist_site_info_t()
+{
+	name = "myanimelist";
+	url = "myanimelist.net";
+	login_uri = "";
+	login_cookie = "";
+
+	site_parser_info_t mal_parser_info = 
+	{
+		"/html[1]/body[1]/div[1]/div[2]/div[1]/div[1]/ul[1]/li[1]/a[1]",
+		"/html/body/div/div/ul[@class='nav']/li[@class='next']/a",
+
+		"/a[@class='hovertitle']",  // name
+		"/a[@class='hovertitle']",  // uri
+
+		"//meta[@property='og:image']/@content",
+		"//div[@class='mainEntry']/img[@class='screenshots']/@src", //"/html/body/div/div/div/div/div/div[@class='mainEntry']/img[@class='screenshots']/@src",
+
+		parser_entity_t("//a[@class='hovertitle']/text()", "(.*) \\(\\d{4}\\)"), // name
+		"/html/body/div/div/form/@data-id", // id
+		"/html/body/div[@id='siteContainer']/div[2]/text()", //"//div[@id='siteContainer']/@itemtype", // type
+		parser_entity_t("//a[@class='hovertitle']/text()", "\\((\\d{4})\\)"), // year
+		parser_entity_t("", "Score:\\s((?:\\d|[,\\.])+)"), // average rating
+		"//meta[@itemprop='bestRating']/@content", // best rating
+		"//meta[@itemprop='worstRating']/@content", // worst rating
+		parser_entity_t("", "scored by\\s((?:\\d|[,\\.])+)"), // votes num
+		parser_entity_t("", "Ranked:\\s#((?:\\d|[,\\.])+)"), // rank
+		parser_entity_t("", "Episodes:\\s(\\d+)"), // episodes num
+
+		"/html/body/div[@id='siteContainer']/div[3]/text()", // studio name
+		"/html/body/div[@id='siteContainer']/div[3]/a/@href", // studio uri
+
+		"//form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/div/form/select[@class='changeStatus']/option[@selected]/text()", // status
+		"//form/select[@class='episodes']/option[@selected]/text()", // episodes watched
+		"//form/select[@class='timeswatched']/option[@selected]/text()", // times watched
+		"/html/body/div/div/form/div/text()", // rating
+
+		"/html/body/div/table/tbody/tr/td[@class='tableType']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[2]",    // type
+		"/html/body/div/table/tbody/tr/td[@class='tableYear']/a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[3]/a",  // year
+		"/html/body/div/table/tbody/tr/td[@class='tableAverage']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[4]",    // average rating
+
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableStatus']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[5]",    // status
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='episodes']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableEps']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[6]"     // episodes watched
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='timeswatched']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableTimesWatched']/text()",
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/div/text()", //"/html/body/div/table/tbody/tr/td[@class='tableRating']/div/text()",
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/span[@class='totalEps']/text()",
+
+		"//ul[@class='cardDeck pure-g cd-narrow']/li/a", //"/html/body/div/div/div/table/tbody/tr/td[@class='tableTitle']/a",
+
+		// Since October 2013, third-party applications need to identify themselves
+		// with a unique user-agent string that is whitelisted by MAL. Using a generic
+		// value (e.g. "Mozilla/5.0") or an arbitrary one (e.g. "NowUpdater/1.0") will
+		// result in invalid text/html responses, courtesy of Incapsula.
+		// To get your own whitelisted user-agent string, follow the registration link
+		// at the official MAL API club page (http://myanimelist.net/forum/?topicid=692311).
+		// If, for any reason, you'd like to use NowUpdater's instead, I will appreciate it if you ask beforehand.
+		"api-taiga-32864c09ef538453b4d8110734ee355b"
+	};
+
+	parser_info = mal_parser_info;
+
+	http = new http_session_t(url);
+
+	const char *MAL_TT[] =
+	{
+		"Unknown",
+		"TV",
+		"Movie",
+		"Special",
+		"OVA",
+		"ONA",
+		"Music"
+	};
+
+	title_types.assign(MAL_TT, MAL_TT + countof(MAL_TT));
+
+	const int MAL_TT_IDS[] =
+	{
+		0,
+		1,
+		3,
+		4,
+		2,
+		5,
+		6
+	};
+
+	title_type_ids.assign(MAL_TT_IDS, MAL_TT_IDS + countof(MAL_TT_IDS));
+
+	const char *MAL_TS[] =
+	{
+		"Not added",
+		"Completed",
+		"Watching",
+		"Plan to Watch",
+		"On Hold",
+		"Dropped",
+		"Won't Watch"
+	};
+
+	title_statuses.assign(MAL_TS, MAL_TS + countof(MAL_TS));
+
+	const int MAL_TS_IDS[] =
+	{
+		0,
+		2,
+		1,
+		6,
+		3,
+		4,
+		4 // "Won't Watch"
+	};
+
+	title_status_ids.assign(MAL_TS_IDS, MAL_TS_IDS + countof(MAL_TS_IDS));
+
+	rating_mulcoef = 1;
+
+	cover_image_scale_x = 0.3f;
+	cover_image_scale_y = 0.3f;
+
+	color = ImVec4(0.0f, 0.6f, 0.6f, 1.0f);
+}
 
 
 
-bool site_info_t::parse_title_info_by_id_mal(site_user_info_t &site_user, title_info_t &title)
+bool myanimelist_site_info_t::parse_title_info_by_id(site_user_info_t &site_user, title_info_t &title)
 {
 	// As MAL API doesn't have a method to get information by ID, we're using an
 	// undocumented call that is normally used to display information bubbles
@@ -1106,114 +1262,213 @@ bool site_info_t::parse_title_info_by_id_mal(site_user_info_t &site_user, title_
 	return true;
 }
 
-bool site_info_t::sync_mal(const std::string &username, const std::string &password, site_user_info_t &site_user)
+//-----------------------------------------------------------------------------------
+anime_planet_site_info_t::anime_planet_site_info_t()
 {
-	return import_mal(http->send_request(HTTPRequest::HTTP_GET, parser_info.useragent, "/malappinfo.php?u=" + username + "&status=all", "", username, password), site_user);
+	name = "anime_planet";
+	url = "www.anime-planet.com";
+	login_uri = "/login.php?";
+	login_cookie = "ap";
+
+	site_parser_info_t ap_parser_info = 
+	{
+		"/html[1]/body[1]/div[1]/div[2]/div[1]/div[1]/ul[1]/li[1]/a[1]",
+		"/html/body/div/div/ul[@class='nav']/li[@class='next']/a",
+
+		"/html/body/div/table/tbody/tr/td[@class='tableTitle']/a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // name
+		"/html/body/div/table/tbody/tr/td[@class='tableTitle']/a/@href", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // uri
+
+		"//meta[@property='og:image']/@content",
+		"//div[@class='mainEntry']/img[@class='screenshots']/@src", //"/html/body/div/div/div/div/div/div[@class='mainEntry']/img[@class='screenshots']/@src",
+
+		"//h1[@itemprop='name']/text()", // name
+		"/html/body/div/div/form/@data-id", // id
+		"/html/body/div[@id='siteContainer']/div[2]/text()", //"//div[@id='siteContainer']/@itemtype", // type
+		"//span[@class='iconYear']/span/a/text()", // year
+		"/html/body/div[@id='siteContainer']/div/div[@class='avgRating']/span/text()", //"//meta[@itemprop='ratingValue']/@content", // average rating
+		"//meta[@itemprop='bestRating']/@content", // best rating
+		"//meta[@itemprop='worstRating']/@content", // worst rating
+		parser_entity_t("//meta[@itemprop='ratingCount']/@content", "(?:\\d|[,\\.])+"), // votes num
+		parser_entity_t("/html/body/div[@id='siteContainer']/div[6]/text()", "(?:\\d|[,\\.])+"), // rank
+		"/html/body/div/div/form/select[@class='episodes']/@data-eps", // episodes num
+
+		"/html/body/div[@id='siteContainer']/div[3]/text()", // studio name
+		"/html/body/div[@id='siteContainer']/div[3]/a/@href", // studio uri
+
+		"//form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/div/form/select[@class='changeStatus']/option[@selected]/text()", // status
+		"//form/select[@class='episodes']/option[@selected]/text()", // episodes watched
+		"//form/select[@class='timeswatched']/option[@selected]/text()", // times watched
+		"/html/body/div/div/form/div/text()", // rating
+
+		"/html/body/div/table/tbody/tr/td[@class='tableType']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[2]",    // type
+		"/html/body/div/table/tbody/tr/td[@class='tableYear']/a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[3]/a",  // year
+		"/html/body/div/table/tbody/tr/td[@class='tableAverage']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[4]",    // average rating
+
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableStatus']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[5]",    // status
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='episodes']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableEps']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[6]"     // episodes watched
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='timeswatched']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableTimesWatched']/text()",
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/div/text()", //"/html/body/div/table/tbody/tr/td[@class='tableRating']/div/text()",
+		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/span[@class='totalEps']/text()",
+
+		"//ul[@class='cardDeck pure-g cd-narrow']/li/a" //"/html/body/div/div/div/table/tbody/tr/td[@class='tableTitle']/a"
+	};
+
+	parser_info = ap_parser_info;
+
+	http = new http_session_t(url);
+
+	const char *AP_TT[] =
+	{
+		"Other",
+		"TV",
+		"Movie",
+		"Special",
+		"OVA",
+		"Web",
+		"Music Video"
+	};
+
+	title_types.assign(AP_TT, AP_TT + countof(AP_TT));
+
+	const int AP_TT_IDS[] =
+	{
+		0,
+		1,
+		2,
+		3,
+		4,
+		5,
+		6
+	};
+
+	title_type_ids.assign(AP_TT_IDS, AP_TT_IDS + countof(AP_TT_IDS));
+
+	const char *AP_TS[] =
+	{
+		"Not added",
+		"Watched",
+		"Watching",
+		"Want to Watch",
+		"Stalled",
+		"Dropped",
+		"Won't Watch"
+	};
+
+	title_statuses.assign(AP_TS, AP_TS + countof(AP_TS));
+
+	const int AP_TS_IDS[] =
+	{
+		0,
+		1,
+		2,
+		4,
+		5,
+		3,
+		6
+	};
+
+	title_status_ids.assign(AP_TS_IDS, AP_TS_IDS + countof(AP_TS_IDS));
+
+	rating_mulcoef = 2;
+
+	cover_image_scale_x = 0.3f;
+	cover_image_scale_y = 0.3f;
+
+	color = ImVec4(0.6f, 0.6f, 0.0f, 1.0f);
 }
 
-bool site_info_t::import_mal(const std::string &xml_str, site_user_info_t &site_user)
+bool anime_planet_site_info_t::authenticate(site_user_info_t &site_user)
 {
-	pugi::xml_document doc;
+	if(http->cookies.find(login_cookie) == http->cookies.end())
+		http->send_form(HTTPRequest::HTTP_POST, login_uri, site_user.username, site_user.password, login_cookie);
 
-	if(!load_xml(doc, xml_str))
+	return http->cookies.find(login_cookie) != http->cookies.end();
+}
+
+bool anime_planet_site_info_t::send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num)
+{
+	if(!authenticate(site_user))
 		return false;
 
-	return import_mal(doc, site_user);
+	std::string json_request_str = make_json_request_str(std::string("ajax_set_episodes"),
+														 title.id,
+														 std::to_string(episodes_watched_num));
+
+	return http->send_json_request(title.uri, json_request_str, login_cookie);
 }
 
-bool site_info_t::import_mal(pugi::xml_node &xml_doc_node, site_user_info_t &site_user)
+bool anime_planet_site_info_t::send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
 {
-	uint32_t prev_added_titles_num = 0;
+	if(!authenticate(site_user))
+		return false;
 
-	std::vector<title_info_t> site_titles;
+	std::string json_request_str = make_json_request_str(std::string("ajax_set_status"),
+														 title.id,
+														 std::string("anime"),
+														 std::to_string(title_status_ids[status]));
 
-	foreach_xml_node(node_myanimelist, xml_doc_node, "myanimelist")
+	return http->send_json_request(title.uri, json_request_str, login_cookie);
+}
+
+bool anime_planet_site_info_t::send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating)
+{
+	if(!authenticate(site_user))
+		return false;
+
+	std::string json_request_str = make_json_request_str(std::string("ajax_set_rating"),
+														 title.id,
+														 std::string("anime"),
+														 std::to_string(rating / rating_mulcoef));
+
+	return http->send_json_request(title.uri, json_request_str, login_cookie);
+}
+
+bool anime_planet_site_info_t::send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
+{
+	return send_request_change_title_status(site_user, title, status);
+}
+
+bool anime_planet_site_info_t::send_request_delete_title(site_user_info_t &site_user, const title_info_t &title)
+{
+	return send_request_change_title_status(site_user, title, NU_TITLE_STATUS_NOT_ADDED);
+}
+
+bool anime_planet_site_info_t::send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles)
+{
+	if(!authenticate(site_user))
+		return false;
+
+	std::string title_name_encoded_str;
+	Poco::URI::encode(title_name, "", title_name_encoded_str);
+	std::string search_uri = "/anime/all?name=" + title_name_encoded_str;
+
+	pugi::xml_document doc;
+
+	if(!load_xhtml(doc, http->redirect_to(search_uri, login_cookie)))
+		return false;
+
+	const pugi::xpath_node_set nodes = doc.select_nodes(parser_info.titlesearch_titles.xpath.c_str());
+
+	for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
 	{
-		// Available tags:
-		// - user_id
-		// - user_name
-		// - user_watching
-		// - user_completed
-		// - user_onhold
-		// - user_dropped
-		// - user_plantowatch
-		// - user_days_spent_watching
-		//pugi::xml_node node_myinfo = node_myanimelist.child(L"myinfo");
-		//user_.id = XmlReadStrValue(node_myinfo, L"user_id");
-		//user_.username = XmlReadStrValue(node_myinfo, L"user_name");
+		pugi::xml_node node = it->node();
 
-		// Available tags:
-		// - series_animedb_id
-		// - series_title
-		// - series_synonyms (separated by "; ")
-		// - series_type
-		// - series_episodes
-		// - series_status
-		// - series_start
-		// - series_end
-		// - series_image
-		// - my_id (deprecated)
-		// - my_watched_episodes
-		// - my_start_date
-		// - my_finish_date
-		// - my_score
-		// - my_status
-		// - my_rewatching
-		// - my_rewatching_ep
-		// - my_last_updated
-		// - my_tags
-		foreach_xml_node(node, node_myanimelist, "anime")
-		{
-			title_info_t title;
-			user_title_info_t user_title = { 0 };
+		title_info_t title; // = { /*node.first_child().value()*/"", node.attribute("href").value() };
 
-			user_title.index = titles.size();
-			user_title.last_updated = Poco::Timestamp::TIMEVAL_MIN;
+		//// remove line breaks:
+		////title.name.erase(std::remove_if(title.name.begin(), title.name.end(), std::iscntrl), title.name.end());
+		////replace_whitespace(title.name);
+		//std::replace_if(title.name.begin(), title.name.end(), std::iscntrl, ' ');
 
-			if(!parse_title_info_mal(node, site_user, title))
-				return false;
-
-			if(!parse_user_title_info_mal(node, user_title))
-				return false;
-
-			site_titles.push_back(title);
-
-			std::vector<title_info_t>::const_iterator title_it = std::find_if(titles.begin(), titles.end(), std::bind2nd(compare_by_name<title_info_t>(), title));
-
-			if(title_it != titles.end())
-			{
-				user_title.index = title_it - titles.begin();
-				titles[user_title.index] = title;
-			}
-			else
-			{
-				titles.push_back(title);
-			}
-
-			std::vector<user_title_info_t>::iterator user_title_it = std::find_if(site_user.user_titles.begin(), site_user.user_titles.end(), std::bind2nd(compare_by_index<user_title_info_t>(), user_title));
-
-			if(user_title_it != site_user.user_titles.end())
-			{
-				*user_title_it = user_title;
-			}
-			else
-			{
-				site_user.user_titles.push_back(user_title);
-				++prev_added_titles_num;
-			}
-		}
+		if(site_info_t::parse_title_info(site_user, node.attribute("href").value(), title))
+			found_titles.push_back(title);
 	}
 
-	remove_titles(site_user, site_titles);
-
-	return true;
+	return !found_titles.empty();
 }
 
-bool site_info_t::sync(const std::string &username, const std::string &password, site_user_info_t &site_user)
+bool anime_planet_site_info_t::sync(const std::string &username, const std::string &password, site_user_info_t &site_user)
 {
-	if(sync_func)
-		return sync_func(username, password, site_user);
-
 	uint32_t prev_added_titles_num = 0;
 
 	std::vector<title_info_t> site_titles;
@@ -1284,6 +1539,57 @@ bool site_info_t::sync(const std::string &username, const std::string &password,
 	return true;
 }
 
+bool anime_planet_site_info_t::parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title)
+{
+	NU_PARSE(title, cover_thumb_uri, true);
+	NU_PARSE(title, cover_uri, true);
+
+	//title.cover_texture.handle = 0;
+
+	if(title.name.empty())
+	{
+		NU_PARSE(title, name, true);
+
+		// remove line breaks:
+		//title.name.erase(std::remove_if(title.name.begin(), title.name.end(), std::iscntrl), title.name.end());
+		//replace_whitespace(title.name);
+		std::replace_if(title.name.begin(), title.name.end(), std::iscntrl, ' ');
+
+		std::cout << title.name << "(" << title.uri << ")" << std::endl;
+	}
+
+	NU_PARSE(title, id, true);
+
+	std::string title_type_str; { bool found = parse(node, parser_info.title_type, title_type_str); }
+
+	for(std::vector<std::string>::const_iterator title_type_it = title_types.begin(); title_type_it != title_types.end(); ++title_type_it)
+		if(title_type_str.find(*title_type_it) != std::string::npos)
+		{
+			title.type = title_type_it - title_types.begin();
+
+			std::cout << title.name << "(" << title_types[title.type] << ")" << std::endl;
+
+			break;
+		}
+
+	NU_PARSE(title, year, true);
+	NU_PARSE(title, average_rating, true);
+
+	NU_PARSE(title, best_rating, true);
+	NU_PARSE(title, worst_rating, true);
+	NU_PARSE(title, votes_num, true);
+	NU_PARSE(title, rank, true);
+
+	NU_PARSE(title, episodes_num, true);
+
+	return true;
+}
+
+
+bool site_info_t::parse_title_info_by_id(site_user_info_t & site_user, title_info_t & title)
+{
+	throw std::exception("The method or operation is not implemented.");
+}
 
 bool site_info_t::parse_title_info(pugi::xml_document &doc, site_user_info_t &site_user, const std::string &title_uri, title_info_t &title)
 {
@@ -1291,7 +1597,7 @@ bool site_info_t::parse_title_info(pugi::xml_document &doc, site_user_info_t &si
 
 	if(title.uri.empty())
 	{
-		if(!parse_title_info_by_id_mal(site_user, title))
+		if(!parse_title_info_by_id(site_user, title))
 			return false;
 	}
 	else
@@ -1311,30 +1617,6 @@ bool site_info_t::parse_title_info(pugi::xml_document &doc, site_user_info_t &si
 
 	return true;
 }
-
-//bool site_info_t::parse_title_info(pugi::xml_document &doc, const std::string &title_name, const std::string &title_uri, title_info_t &title)
-//{
-//	title.name = title_name;
-//
-//	// remove line breaks:
-//	//title.name.erase(std::remove_if(title.name.begin(), title.name.end(), std::iscntrl), title.name.end());
-//	//replace_whitespace(title.name);
-//	std::replace_if(title.name.begin(), title.name.end(), std::iscntrl, ' ');
-//
-//	std::cout << title.name << "(" << title.uri << ")" << std::endl;
-//
-//	return parse_title_info(doc, title_uri, title);
-//}
-//
-//bool site_info_t::parse_title_info(const std::string &title_name, const std::string &title_uri, title_info_t &title)
-//{
-//	pugi::xml_document doc;
-//
-//	if(!parse_title_info(doc, title_name, title_uri, title))
-//		return false;
-//
-//	return true;
-//}
 
 bool site_info_t::parse_title_info(site_user_info_t &site_user, const std::string &title_uri, title_info_t &title)
 {
@@ -1388,55 +1670,6 @@ bool site_info_t::parse_title_and_user_title_info(site_user_info_t &site_user, c
 	return true;
 }
 
-bool site_info_t::parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title)
-{
-	if(parse_title_info_func)
-		return parse_title_info_func(node, site_user, title);
-
-	NU_PARSE(title, cover_thumb_uri, true);
-	NU_PARSE(title, cover_uri, true);
-
-	//title.cover_texture.handle = 0;
-
-	if(title.name.empty())
-	{
-		NU_PARSE(title, name, true);
-
-		// remove line breaks:
-		//title.name.erase(std::remove_if(title.name.begin(), title.name.end(), std::iscntrl), title.name.end());
-		//replace_whitespace(title.name);
-		std::replace_if(title.name.begin(), title.name.end(), std::iscntrl, ' ');
-
-		std::cout << title.name << "(" << title.uri << ")" << std::endl;
-	}
-
-	NU_PARSE(title, id, true);
-
-	std::string title_type_str; { bool found = parse(node, parser_info.title_type, title_type_str); }
-
-	for(std::vector<std::string>::const_iterator title_type_it = title_types.begin(); title_type_it != title_types.end(); ++title_type_it)
-		if(title_type_str.find(*title_type_it) != std::string::npos)
-		{
-			title.type = title_type_it - title_types.begin();
-
-			std::cout << title.name << "(" << title_types[title.type] << ")" << std::endl;
-
-			break;
-		}
-
-	NU_PARSE(title, year, true);
-	NU_PARSE(title, average_rating, true);
-
-	NU_PARSE(title, best_rating, true);
-	NU_PARSE(title, worst_rating, true);
-	NU_PARSE(title, votes_num, true);
-	NU_PARSE(title, rank, true);
-
-	NU_PARSE(title, episodes_num, true);
-
-	return true;
-}
-
 bool site_info_t::parse_user_title_info(pugi::xml_node &node, user_title_info_t &user_title)
 {
 	std::string title_status_str; { bool found = parse(node, parser_info.title_status, title_status_str); }
@@ -1472,7 +1705,7 @@ Poco::DateTime parse_date_mal(pugi::xml_node &node, const pugi::char_t *name)
 	return node_value && pugi::string_t(node_value).size() > 0 ? Poco::DateTimeParser::parse(node_value, tzd) : Poco::Timestamp(Poco::Timestamp::TIMEVAL_MIN);
 }
 
-bool site_info_t::parse_title_info_mal(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title)
+bool myanimelist_site_info_t::parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title)
 {
 	NU_PARSE(title, cover_thumb_uri, "series_image", true);
 	//NU_PARSE(title, cover_uri, true);
@@ -1542,14 +1775,14 @@ bool site_info_t::parse_title_info_mal(pugi::xml_node &node, site_user_info_t &s
 
 	//anime_item.AddtoUserList();
 
-	if(!parse_title_info_by_id_mal(site_user, title))
+	if(!parse_title_info_by_id(site_user, title))
 		return false;
 
 	if(title.cover_thumb_uri.empty() && !title.cover_texture.handle)
 	{
 		std::vector<title_info_t> last_found_titles;
 
-		if(send_request_search_title_mal(site_user, title.name, last_found_titles))
+		if(send_request_search_title(site_user, title.name, last_found_titles))
 			for(uint32_t i = 0; i <  last_found_titles.size(); ++i)
 				if(last_found_titles[i].name == title.name) // exact match
 				{
@@ -1562,7 +1795,7 @@ bool site_info_t::parse_title_info_mal(pugi::xml_node &node, site_user_info_t &s
 	return true;
 }
 
-bool site_info_t::parse_title_info_search_entry(pugi::xml_node &node, title_info_t &title)
+bool myanimelist_site_info_t::parse_title_info_search_entry(pugi::xml_node &node, title_info_t &title)
 {
 	NU_PARSE(title, cover_thumb_uri, "image", true);
 	//NU_PARSE(title, cover_uri, true);
@@ -1601,7 +1834,7 @@ bool site_info_t::parse_title_info_search_entry(pugi::xml_node &node, title_info
 	return true;
 }
 
-bool site_info_t::parse_user_title_info_mal(pugi::xml_node &node, user_title_info_t &user_title)
+bool myanimelist_site_info_t::parse_user_title_info(pugi::xml_node &node, user_title_info_t &user_title)
 {
 	bool title_status_found = false;
 
@@ -1658,145 +1891,7 @@ bool site_info_t::parse_user_title_info_mal(pugi::xml_node &node, user_title_inf
 
 #undef NU_PARSE
 
-bool site_info_t::send_request_change_title_episodes_watched_num(site_user_info_t &site_user, uint32_t i, uint32_t episodes_watched_num)
-{
-	return send_request_change_title_episodes_watched_num(site_user, titles[i], episodes_watched_num);
-}
-
-bool site_info_t::send_request_change_title_status(site_user_info_t &site_user, uint32_t i, uint32_t status)
-{
-	return send_request_change_title_status(site_user, titles[i], status);
-}
-
-bool site_info_t::send_request_change_title_rating(site_user_info_t &site_user, uint32_t i, float rating)
-{
-	return send_request_change_title_rating(site_user, titles[i], rating);
-}
-
-bool site_info_t::send_request_add_title(site_user_info_t &site_user, uint32_t i, uint32_t status)
-{
-	return send_request_add_title(site_user, titles[i], status);
-}
-
-bool site_info_t::send_request_delete_title(site_user_info_t &site_user, uint32_t i)
-{
-	return send_request_delete_title(site_user, titles[i]);
-}
-
-
-
-bool site_info_t::authenticate(site_user_info_t &site_user)
-{
-	if(authenticate_func)
-		return authenticate_func(site_user);
-
-	if(http->cookies.find(login_cookie) == http->cookies.end())
-		http->send_form(HTTPRequest::HTTP_POST, login_uri, site_user.username, site_user.password, login_cookie);
-
-	return http->cookies.find(login_cookie) != http->cookies.end();
-}
-
-bool site_info_t::send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num)
-{
-	if(send_request_change_title_episodes_watched_num_func)
-		return send_request_change_title_episodes_watched_num_func(site_user, title, episodes_watched_num);
-
-	if(!authenticate(site_user))
-		return false;
-
-	std::string json_request_str = make_json_request_str(std::string("ajax_set_episodes"),
-														 title.id,
-														 std::to_string(episodes_watched_num));
-
-	return http->send_json_request(title.uri, json_request_str, login_cookie);
-}
-
-bool site_info_t::send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
-{
-	if(send_request_change_title_status_func)
-		return send_request_change_title_status_func(site_user, title, status);
-
-	if(!authenticate(site_user))
-		return false;
-
-	std::string json_request_str = make_json_request_str(std::string("ajax_set_status"),
-														 title.id,
-														 std::string("anime"),
-														 std::to_string(title_status_ids[status]));
-
-	return http->send_json_request(title.uri, json_request_str, login_cookie);
-}
-
-bool site_info_t::send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating)
-{
-	if(send_request_change_title_rating_func)
-		return send_request_change_title_rating_func(site_user, title, rating);
-
-	if(!authenticate(site_user))
-		return false;
-
-	std::string json_request_str = make_json_request_str(std::string("ajax_set_rating"),
-														 title.id,
-														 std::string("anime"),
-														 std::to_string(rating / rating_mulcoef));
-
-	return http->send_json_request(title.uri, json_request_str, login_cookie);
-}
-
-bool site_info_t::send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
-{
-	if(send_request_add_title_func)
-		return send_request_add_title_func(site_user, title, status);
-
-	return send_request_change_title_status(site_user, title, status);
-}
-
-bool site_info_t::send_request_delete_title(site_user_info_t &site_user, const title_info_t &title)
-{
-	if(send_request_delete_title_func)
-		return send_request_delete_title_func(site_user, title);
-
-	return send_request_change_title_status(site_user, title, NU_TITLE_STATUS_NOT_ADDED);
-}
-
-bool site_info_t::send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles)
-{
-	if(send_request_search_title_func)
-		return send_request_search_title_func(site_user, title_name, found_titles);
-
-	if(!authenticate(site_user))
-		return false;
-
-	std::string title_name_encoded_str;
-	Poco::URI::encode(title_name, "", title_name_encoded_str);
-	std::string search_uri = "/anime/all?name=" + title_name_encoded_str;
-
-	pugi::xml_document doc;
-
-	if(!load_xhtml(doc, http->redirect_to(search_uri, login_cookie)))
-		return false;
-
-	const pugi::xpath_node_set nodes = doc.select_nodes(parser_info.titlesearch_titles.xpath.c_str());
-
-	for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
-	{
-		pugi::xml_node node = it->node();
-
-		title_info_t title; // = { /*node.first_child().value()*/"", node.attribute("href").value() };
-
-		//// remove line breaks:
-		////title.name.erase(std::remove_if(title.name.begin(), title.name.end(), std::iscntrl), title.name.end());
-		////replace_whitespace(title.name);
-		//std::replace_if(title.name.begin(), title.name.end(), std::iscntrl, ' ');
-
-		if(parse_title_info(site_user, node.attribute("href").value(), title))
-			found_titles.push_back(title);
-	}
-
-	return !found_titles.empty();
-}
-
-bool site_info_t::send_request_search_title_mal(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles)
+bool myanimelist_site_info_t::send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles)
 {
 	std::string title_name_encoded_str;
 	Poco::URI::encode(title_name, "", title_name_encoded_str);
@@ -1906,7 +2001,7 @@ template<class T> std::string send_request_mal(http_session_t *http, std::string
 	return http->send_request(HTTPRequest::HTTP_POST, "/api/animelist/" + action + "/" + std::to_string(title.id) + ".xml", params, useragent, site_user.username, site_user.password, "");
 }
 
-bool site_info_t::authenticate_mal(site_user_info_t &site_user)
+bool myanimelist_site_info_t::authenticate(site_user_info_t &site_user)
 {
 	//if(http->cookies.find(login_cookie) == http->cookies.end())
 	//	http->send_form(HTTPRequest::HTTP_POST, login_uri, username, password, login_cookie);
@@ -1915,44 +2010,178 @@ bool site_info_t::authenticate_mal(site_user_info_t &site_user)
 	return true;
 }
 
-bool site_info_t::send_request_change_title_episodes_watched_num_mal(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num)
+bool myanimelist_site_info_t::sync(const std::string &username, const std::string &password, site_user_info_t &site_user)
+{
+	return import(http->send_request(HTTPRequest::HTTP_GET, parser_info.useragent, "/malappinfo.php?u=" + username + "&status=all", "", username, password), site_user);
+}
+
+bool myanimelist_site_info_t::import(const std::string &xml_str, site_user_info_t &site_user)
+{
+	pugi::xml_document doc;
+
+	if(!load_xml(doc, xml_str))
+		return false;
+
+	return import(doc, site_user);
+}
+
+bool myanimelist_site_info_t::import(pugi::xml_node &xml_doc_node, site_user_info_t &site_user)
+{
+	uint32_t prev_added_titles_num = 0;
+
+	std::vector<title_info_t> site_titles;
+
+	foreach_xml_node(node_myanimelist, xml_doc_node, "myanimelist")
+	{
+		// Available tags:
+		// - user_id
+		// - user_name
+		// - user_watching
+		// - user_completed
+		// - user_onhold
+		// - user_dropped
+		// - user_plantowatch
+		// - user_days_spent_watching
+		//pugi::xml_node node_myinfo = node_myanimelist.child(L"myinfo");
+		//user_.id = XmlReadStrValue(node_myinfo, L"user_id");
+		//user_.username = XmlReadStrValue(node_myinfo, L"user_name");
+
+		// Available tags:
+		// - series_animedb_id
+		// - series_title
+		// - series_synonyms (separated by "; ")
+		// - series_type
+		// - series_episodes
+		// - series_status
+		// - series_start
+		// - series_end
+		// - series_image
+		// - my_id (deprecated)
+		// - my_watched_episodes
+		// - my_start_date
+		// - my_finish_date
+		// - my_score
+		// - my_status
+		// - my_rewatching
+		// - my_rewatching_ep
+		// - my_last_updated
+		// - my_tags
+		foreach_xml_node(node, node_myanimelist, "anime")
+		{
+			title_info_t title;
+			user_title_info_t user_title = { 0 };
+
+			user_title.index = titles.size();
+			user_title.last_updated = Poco::Timestamp::TIMEVAL_MIN;
+
+			if(!parse_title_info(node, site_user, title))
+				return false;
+
+			if(!parse_user_title_info(node, user_title))
+				return false;
+
+			site_titles.push_back(title);
+
+			std::vector<title_info_t>::const_iterator title_it = std::find_if(titles.begin(), titles.end(), std::bind2nd(compare_by_name<title_info_t>(), title));
+
+			if(title_it != titles.end())
+			{
+				user_title.index = title_it - titles.begin();
+				titles[user_title.index] = title;
+			}
+			else
+			{
+				titles.push_back(title);
+			}
+
+			std::vector<user_title_info_t>::iterator user_title_it = std::find_if(site_user.user_titles.begin(), site_user.user_titles.end(), std::bind2nd(compare_by_index<user_title_info_t>(), user_title));
+
+			if(user_title_it != site_user.user_titles.end())
+			{
+				*user_title_it = user_title;
+			}
+			else
+			{
+				site_user.user_titles.push_back(user_title);
+				++prev_added_titles_num;
+			}
+		}
+	}
+
+	remove_titles(site_user, site_titles);
+
+	return true;
+}
+
+bool myanimelist_site_info_t::send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num)
 {
 	std::string response_str = send_request_mal(http, "update", parser_info.useragent, site_user, title, "episode", episodes_watched_num);
 
 	return response_str == "Updated";
 }
 
-bool site_info_t::send_request_change_title_status_mal(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
+bool myanimelist_site_info_t::send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
 {
 	if(!status)
-		return send_request_delete_title_mal(site_user, title);
+		return send_request_delete_title(site_user, title);
 
 	std::string response_str = send_request_mal(http, "update", parser_info.useragent, site_user, title, "status", title_status_ids[status]);
 
 	return response_str == "Updated";
 }
 
-bool site_info_t::send_request_change_title_rating_mal(site_user_info_t &site_user, const title_info_t &title, float rating)
+bool myanimelist_site_info_t::send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating)
 {
 	std::string response_str = send_request_mal(http, "update", parser_info.useragent, site_user, title, "score", rating / rating_mulcoef);
 
 	return response_str == "Updated";
 }
 
-bool site_info_t::send_request_add_title_mal(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
+bool myanimelist_site_info_t::send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
 {
 	std::string response_str = send_request_mal(http, "add", parser_info.useragent, site_user, title, "status", title_status_ids[status]);
 
 	return response_str.find("<title>201 Created</title>") != std::string::npos || 0 != get_int_number(response_str.c_str());
 }
 
-bool site_info_t::send_request_delete_title_mal(site_user_info_t &site_user, const title_info_t &title)
+bool myanimelist_site_info_t::send_request_delete_title(site_user_info_t &site_user, const title_info_t &title)
 {
 	std::string response_str = send_request_mal(http, "delete", parser_info.useragent, site_user, title, "", 0);
 
 	return response_str == "Deleted";
 }
 
+
+
+
+
+
+
+
+bool site_info_t::send_request_change_title_episodes_watched_num(site_user_info_t &site_user, uint32_t i, uint32_t episodes_watched_num)
+{
+	return send_request_change_title_episodes_watched_num(site_user, titles[i], episodes_watched_num);
+}
+
+bool site_info_t::send_request_change_title_status(site_user_info_t &site_user, uint32_t i, uint32_t status)
+{
+	return send_request_change_title_status(site_user, titles[i], status);
+}
+
+bool site_info_t::send_request_change_title_rating(site_user_info_t &site_user, uint32_t i, float rating)
+{
+	return send_request_change_title_rating(site_user, titles[i], rating);
+}
+
+bool site_info_t::send_request_add_title(site_user_info_t &site_user, uint32_t i, uint32_t status)
+{
+	return send_request_add_title(site_user, titles[i], status);
+}
+
+bool site_info_t::send_request_delete_title(site_user_info_t &site_user, uint32_t i)
+{
+	return send_request_delete_title(site_user, titles[i]);
+}
 
 void site_info_t::remove_titles(site_user_info_t &site_user, std::vector<title_info_t> &site_titles)
 {

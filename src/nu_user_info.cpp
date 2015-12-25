@@ -358,409 +358,27 @@ bool save_data(options_t *options, const std::string &dataname, const pugi::char
 
 user_info_t::user_info_t(const std::string &username, const std::string &password, options_t *options) : username(username), password(password), options(options), current_site(0)//, poco("myanimelist.net")//poco("www.anime-planet.com") //poco(sites[current_site].site_url)
 {
-	site_info_t anime_planet_com;
-
-	anime_planet_com.name = "anime_planet";
-	anime_planet_com.url = "www.anime-planet.com";
-	anime_planet_com.login_uri = "/login.php?";
-	anime_planet_com.login_cookie = "ap";
-
-	site_parser_info_t ap_parser_info = 
-	{
-		"/html[1]/body[1]/div[1]/div[2]/div[1]/div[1]/ul[1]/li[1]/a[1]",
-		"/html/body/div/div/ul[@class='nav']/li[@class='next']/a",
-
-		"/html/body/div/table/tbody/tr/td[@class='tableTitle']/a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // name
-		"/html/body/div/table/tbody/tr/td[@class='tableTitle']/a/@href", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // uri
-
-		"//meta[@property='og:image']/@content",
-		"//div[@class='mainEntry']/img[@class='screenshots']/@src", //"/html/body/div/div/div/div/div/div[@class='mainEntry']/img[@class='screenshots']/@src",
-
-		"//h1[@itemprop='name']/text()", // name
-		"/html/body/div/div/form/@data-id", // id
-		"/html/body/div[@id='siteContainer']/div[2]/text()", //"//div[@id='siteContainer']/@itemtype", // type
-		"//span[@class='iconYear']/span/a/text()", // year
-		"/html/body/div[@id='siteContainer']/div/div[@class='avgRating']/span/text()", //"//meta[@itemprop='ratingValue']/@content", // average rating
-		"//meta[@itemprop='bestRating']/@content", // best rating
-		"//meta[@itemprop='worstRating']/@content", // worst rating
-		parser_entity_t("//meta[@itemprop='ratingCount']/@content", "(?:\\d|[,\\.])+"), // votes num
-		parser_entity_t("/html/body/div[@id='siteContainer']/div[6]/text()", "(?:\\d|[,\\.])+"), // rank
-		"/html/body/div/div/form/select[@class='episodes']/@data-eps", // episodes num
-
-		"/html/body/div[@id='siteContainer']/div[3]/text()", // studio name
-		"/html/body/div[@id='siteContainer']/div[3]/a/@href", // studio uri
-
-		"//form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/div/form/select[@class='changeStatus']/option[@selected]/text()", // status
-		"//form/select[@class='episodes']/option[@selected]/text()", // episodes watched
-		"//form/select[@class='timeswatched']/option[@selected]/text()", // times watched
-		"/html/body/div/div/form/div/text()", // rating
-
-		"/html/body/div/table/tbody/tr/td[@class='tableType']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[2]",    // type
-		"/html/body/div/table/tbody/tr/td[@class='tableYear']/a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[3]/a",  // year
-		"/html/body/div/table/tbody/tr/td[@class='tableAverage']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[4]",    // average rating
-
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableStatus']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[5]",    // status
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='episodes']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableEps']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[6]"     // episodes watched
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='timeswatched']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableTimesWatched']/text()",
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/div/text()", //"/html/body/div/table/tbody/tr/td[@class='tableRating']/div/text()",
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/span[@class='totalEps']/text()",
-
-		"//ul[@class='cardDeck pure-g cd-narrow']/li/a" //"/html/body/div/div/div/table/tbody/tr/td[@class='tableTitle']/a"
-	};
-
-	anime_planet_com.parser_info = ap_parser_info;
-
-	anime_planet_com.http = new http_session_t(anime_planet_com.url);
-
-	const char *AP_TT[] =
-	{
-		"Other",
-		"TV",
-		"Movie",
-		"Special",
-		"OVA",
-		"Web",
-		"Music Video"
-	};
-
-	anime_planet_com.title_types.assign(AP_TT, AP_TT + countof(AP_TT));
-
-	const int AP_TT_IDS[] =
-	{
-		0,
-		1,
-		2,
-		3,
-		4,
-		5,
-		6
-	};
-
-	anime_planet_com.title_type_ids.assign(AP_TT_IDS, AP_TT_IDS + countof(AP_TT_IDS));
-
-	const char *AP_TS[] =
-	{
-		"Not added",
-		"Watched",
-		"Watching",
-		"Want to Watch",
-		"Stalled",
-		"Dropped",
-		"Won't Watch"
-	};
-
-	anime_planet_com.title_statuses.assign(AP_TS, AP_TS + countof(AP_TS));
-
-	const int AP_TS_IDS[] =
-	{
-		0,
-		1,
-		2,
-		4,
-		5,
-		3,
-		6
-	};
-
-	anime_planet_com.title_status_ids.assign(AP_TS_IDS, AP_TS_IDS + countof(AP_TS_IDS));
-
-	anime_planet_com.rating_mulcoef = 2;
-
-	anime_planet_com.cover_image_scale_x = 0.3f;
-	anime_planet_com.cover_image_scale_y = 0.3f;
-
-	anime_planet_com.color = ImVec4(0.6f, 0.6f, 0.0f, 1.0f);
-
-	site_info_t myanimelist;
-
-	myanimelist.name = "myanimelist";
-	myanimelist.url = "myanimelist.net";
-	myanimelist.login_uri = "";
-	myanimelist.login_cookie = "";
-
-	site_parser_info_t mal_parser_info = 
-	{
-		"/html[1]/body[1]/div[1]/div[2]/div[1]/div[1]/ul[1]/li[1]/a[1]",
-		"/html/body/div/div/ul[@class='nav']/li[@class='next']/a",
-
-		"/a[@class='hovertitle']",  // name
-		"/a[@class='hovertitle']",  // uri
-
-		"//meta[@property='og:image']/@content",
-		"//div[@class='mainEntry']/img[@class='screenshots']/@src", //"/html/body/div/div/div/div/div/div[@class='mainEntry']/img[@class='screenshots']/@src",
-
-		parser_entity_t("//a[@class='hovertitle']/text()", "(.*) \\(\\d{4}\\)"), // name
-		"/html/body/div/div/form/@data-id", // id
-		"/html/body/div[@id='siteContainer']/div[2]/text()", //"//div[@id='siteContainer']/@itemtype", // type
-		parser_entity_t("//a[@class='hovertitle']/text()", "\\((\\d{4})\\)"), // year
-		parser_entity_t("", "Score:\\s((?:\\d|[,\\.])+)"), // average rating
-		"//meta[@itemprop='bestRating']/@content", // best rating
-		"//meta[@itemprop='worstRating']/@content", // worst rating
-		parser_entity_t("", "scored by\\s((?:\\d|[,\\.])+)"), // votes num
-		parser_entity_t("", "Ranked:\\s#((?:\\d|[,\\.])+)"), // rank
-		parser_entity_t("", "Episodes:\\s(\\d+)"), // episodes num
-
-		"/html/body/div[@id='siteContainer']/div[3]/text()", // studio name
-		"/html/body/div[@id='siteContainer']/div[3]/a/@href", // studio uri
-
-		"//form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/div/form/select[@class='changeStatus']/option[@selected]/text()", // status
-		"//form/select[@class='episodes']/option[@selected]/text()", // episodes watched
-		"//form/select[@class='timeswatched']/option[@selected]/text()", // times watched
-		"/html/body/div/div/form/div/text()", // rating
-
-		"/html/body/div/table/tbody/tr/td[@class='tableType']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[2]",    // type
-		"/html/body/div/table/tbody/tr/td[@class='tableYear']/a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[3]/a",  // year
-		"/html/body/div/table/tbody/tr/td[@class='tableAverage']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[4]",    // average rating
-
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableStatus']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[5]",    // status
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='episodes']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableEps']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[6]"     // episodes watched
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='timeswatched']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableTimesWatched']/text()",
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/div/text()", //"/html/body/div/table/tbody/tr/td[@class='tableRating']/div/text()",
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/span[@class='totalEps']/text()",
-
-		"//ul[@class='cardDeck pure-g cd-narrow']/li/a", //"/html/body/div/div/div/table/tbody/tr/td[@class='tableTitle']/a",
-
-		// Since October 2013, third-party applications need to identify themselves
-		// with a unique user-agent string that is whitelisted by MAL. Using a generic
-		// value (e.g. "Mozilla/5.0") or an arbitrary one (e.g. "NowUpdater/1.0") will
-		// result in invalid text/html responses, courtesy of Incapsula.
-		// To get your own whitelisted user-agent string, follow the registration link
-		// at the official MAL API club page (http://myanimelist.net/forum/?topicid=692311).
-		// If, for any reason, you'd like to use NowUpdater's instead, I will appreciate it if you ask beforehand.
-		"api-taiga-32864c09ef538453b4d8110734ee355b"
-	};
-
-	myanimelist.parser_info = mal_parser_info;
-
-	myanimelist.http = new http_session_t(myanimelist.url);
-
-	const char *MAL_TT[] =
-	{
-		"Unknown",
-		"TV",
-		"Movie",
-		"Special",
-		"OVA",
-		"ONA",
-		"Music"
-	};
-
-	myanimelist.title_types.assign(MAL_TT, MAL_TT + countof(MAL_TT));
-
-	const int MAL_TT_IDS[] =
-	{
-		0,
-		1,
-		3,
-		4,
-		2,
-		5,
-		6
-	};
-
-	myanimelist.title_type_ids.assign(MAL_TT_IDS, MAL_TT_IDS + countof(MAL_TT_IDS));
-
-	const char *MAL_TS[] =
-	{
-		"Not added",
-		"Completed",
-		"Watching",
-		"Plan to Watch",
-		"On Hold",
-		"Dropped",
-		"Won't Watch"
-	};
-
-	myanimelist.title_statuses.assign(MAL_TS, MAL_TS + countof(MAL_TS));
-
-	const int MAL_TS_IDS[] =
-	{
-		0,
-		2,
-		1,
-		6,
-		3,
-		4,
-		4 // "Won't Watch"
-	};
-
-	myanimelist.title_status_ids.assign(MAL_TS_IDS, MAL_TS_IDS + countof(MAL_TS_IDS));
-
-	myanimelist.rating_mulcoef = 1;
-
-	myanimelist.cover_image_scale_x = 0.3f;
-	myanimelist.cover_image_scale_y = 0.3f;
-
-	myanimelist.color = ImVec4(0.0f, 0.6f, 0.6f, 1.0f);
-
-	site_info_t imdb_com;
-
-	imdb_com.name = "imdb";
-	imdb_com.url = "www.imdb.com";
-	imdb_com.login_uri = "https://secure.imdb.com/register-imdb/login";
-	// Use mobile login because it actually works
-	//imdb_com.login_uri = "https://secure.imdb.com/oauth/m_login?origpath=/";
-	//imdb_com.login_cookie = "id|sid|uu|session-id|session-id-time|cache";
-	imdb_com.login_cookie = "id|sid|uu|session-id|session-id-time";
-
-	site_parser_info_t imdb_parser_info = 
-	{
-		"/html[1]/body[1]/div[1]/div[2]/div[1]/div[1]/ul[1]/li[1]/a[1]",
-		"/html/body/div/div/ul[@class='nav']/li[@class='next']/a",
-
-		"//div[@class='list_item odd']/div[@class='info']/b//a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // name
-		"//div[contains(@class, 'list_item')]/div[@class='info']/b//a/@href", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // uri
-
-		"//meta[@property='og:image']/@content",
-		"//div[@class='poster']/a/img/@src",
-
-		//"//div[@class='title_wrapper']/h1[@itemprop='name']/text()", // name
-		"//h1[@itemprop='name']/text()", // name
-		//parser_entity_t("//meta[@property='og:url']/@content", "http\\:\\/\\/www\\.imdb\\.com\\/title\\/tt(\\d{7})\\/"), // id
-		parser_entity_t("//div[@class='ratings_wrapper']/div/@data-titleid", "tt(\\d+)"), // id
-		"//meta[@property='og:type']/@content", //"//div[@id='siteContainer']/@itemtype", // type
-		//parser_entity_t("//meta[@property='og:title']/@content", "\\((\\d{4})\\)"), // year
-		"//meta[@itemprop='datePublished']/@content", // year
-		"//div[@class='imdbRating']/div[@class='ratingValue']/strong/span[@itemprop='ratingValue']/text()", // average rating
-		//"//meta[@itemprop='bestRating']/@content", // best rating
-		"//span[@itemprop='bestRating']/text()", // best rating
-		"//meta[@itemprop='worstRating']/@content", // worst rating
-		parser_entity_t("//div[@class='imdbRating']/a/span[@itemprop='ratingCount']/text()", "(?:\\d|[,\\.])+"), // votes num
-		parser_entity_t("//div[@class='titleReviewBarItem'][last()]/div[@class='titleReviewBarSubItem']/div/span[@class='subText']/text()", "(?:\\d|[,\\.])+"), // rank
-		"//span[@class='bp_sub_heading']/text()", // episodes num
-		//"concat(//span[@class='bp_sub_heading']/text(), substring('1', 1 div not(//span[@class='bp_sub_heading']/text())))", // episodes num
-
-		//"//span[@itemprop='creator']/a[@itemprop='url']/span[@itemprop='name']/text()", // studio name
-		"//span[@itemtype='http:////schema.org//Organization']/a[@itemprop='url']/span[@itemprop='name']/text()", // studio name
-		"//span[@itemtype='http:////schema.org//Organization']/a[@itemprop='url']/@href", // studio uri
-
-		"//form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/div/form/select[@class='changeStatus']/option[@selected]/text()", // status
-		"//form/select[@class='episodes']/option[@selected]/text()", // episodes watched
-		"//form/select[@class='timeswatched']/option[@selected]/text()", // times watched
-		//"//div[@class='ratings_wrapper']/div[@class='inline']/div[@class='rating']/text()", // rating
-		"//div[@class='rating rating-list']/span[@class='rating-rating rating-your']/span[@class='value']/text()", // rating
-
-		"/html/body/div/table/tbody/tr/td[@class='tableType']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[2]",    // type
-		"/html/body/div/table/tbody/tr/td[@class='tableYear']/a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[3]/a",  // year
-		"/html/body/div/table/tbody/tr/td[@class='tableAverage']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[4]",    // average rating
-
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='changeStatus']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableStatus']/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[5]",    // status
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='episodes']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableEps']/text()",  //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[6]"     // episodes watched
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/select[@class='timeswatched']/option[@selected]/text()", //"/html/body/div/table/tbody/tr/td[@class='tableTimesWatched']/text()",
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/div/text()", //"/html/body/div/table/tbody/tr/td[@class='tableRating']/div/text()",
-		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/span[@class='totalEps']/text()",
-
-		"//ul[@class='cardDeck pure-g cd-narrow']/li/a", //"/html/body/div/div/div/table/tbody/tr/td[@class='tableTitle']/a"
-		"Mozilla/5.0 (Windows NT 6.2; rv:37.0) Gecko/20100101 Firefox/37.0"
-	};
-
-	imdb_com.parser_info = imdb_parser_info;
-
-	imdb_com.http = new http_session_t(imdb_com.url);
-
-	const char *IMDB_TT[] =
-	{
-		"video.other",
-		"video.tv_show",
-		"video.movie",
-		"Special",
-		"video.episode", //"OVA",
-		"Web",
-		"Music Video"
-	};
-
-	imdb_com.title_types.assign(IMDB_TT, IMDB_TT + countof(IMDB_TT));
-
-	const int IMDB_TT_IDS[] =
-	{
-		0,
-		1,
-		2,
-		3,
-		4,
-		5,
-		6
-	};
-
-	imdb_com.title_type_ids.assign(IMDB_TT_IDS, IMDB_TT_IDS + countof(IMDB_TT_IDS));
-
-	const char *IMDB_TS[] =
-	{
-		"Not added",
-		"Watched",
-		"Watching",
-		"Want to Watch",
-		"Stalled",
-		"Dropped",
-		"Won't Watch"
-	};
-
-	imdb_com.title_statuses.assign(IMDB_TS, IMDB_TS + countof(IMDB_TS));
-
-	const int IMDB_TS_IDS[] =
-	{
-		0,
-		1,
-		2,
-		4,
-		5,
-		3,
-		6
-	};
-
-	imdb_com.title_status_ids.assign(IMDB_TS_IDS, IMDB_TS_IDS + countof(IMDB_TS_IDS));
-
-	imdb_com.rating_mulcoef = 1;
-
-	imdb_com.cover_image_scale_x = 0.15f;
-	imdb_com.cover_image_scale_y = 0.15f;
-
-	imdb_com.color = ImVec4(0.6f, 0.0f, 0.6f, 1.0f);
-
-	imdb_list_t imdb_lists[] = 
-	{
-		{ "ratings",   "", "RATINGS",   NU_TITLE_STATUS_WATCHED },
-		{ "watchlist", "", "WATCHLIST", NU_TITLE_STATUS_PLAN_TO_WATCH }
-	};
-
-	imdb_com.imdb_lists.assign(imdb_lists, imdb_lists + countof(imdb_lists));
-
-	sites.push_back(anime_planet_com);
-
-	sites.push_back(myanimelist);
-
-#define NU_FUNC(x, t) sites.back().##x##_func = CLOSURE(&sites.back(), &site_info_t::##x##_##t##)
-#define NU_FUNC_MAL(x) NU_FUNC(x, mal)
-
-	NU_FUNC_MAL(authenticate);
-	NU_FUNC_MAL(parse_title_info);
-	NU_FUNC_MAL(sync);
-	NU_FUNC_MAL(send_request_change_title_episodes_watched_num);
-	NU_FUNC_MAL(send_request_change_title_status);
-	NU_FUNC_MAL(send_request_change_title_rating);
-	NU_FUNC_MAL(send_request_add_title);
-	NU_FUNC_MAL(send_request_delete_title);
-	NU_FUNC_MAL(send_request_search_title);
-
-#undef NU_FUNC_MAL
-
-	sites.push_back(imdb_com);
-
-#define NU_FUNC_IMDB(x) NU_FUNC(x, imdb)
-
-	NU_FUNC_IMDB(authenticate);
-	NU_FUNC_IMDB(parse_title_info);
-	NU_FUNC_IMDB(sync);
-	//NU_FUNC_IMDB(send_request_change_title_episodes_watched_num);
-	NU_FUNC_IMDB(send_request_change_title_status);
-	NU_FUNC_IMDB(send_request_change_title_rating);
-	NU_FUNC_IMDB(send_request_add_title);
-	NU_FUNC_IMDB(send_request_delete_title);
-	NU_FUNC_IMDB(send_request_search_title);
-
-#undef NU_FUNC_IMDB
-
-#undef NU_FUNC
+	sites.push_back(new anime_planet_site_info_t());
+
+	sites.push_back(new myanimelist_site_info_t());
+
+	sites.push_back(new imdb_site_info_t());
+
+//#define NU_FUNC_IMDB(x) NU_FUNC(x, imdb)
+//
+//	NU_FUNC_IMDB(authenticate);
+//	NU_FUNC_IMDB(parse_title_info);
+//	NU_FUNC_IMDB(sync);
+//	//NU_FUNC_IMDB(send_request_change_title_episodes_watched_num);
+//	NU_FUNC_IMDB(send_request_change_title_status);
+//	NU_FUNC_IMDB(send_request_change_title_rating);
+//	NU_FUNC_IMDB(send_request_add_title);
+//	NU_FUNC_IMDB(send_request_delete_title);
+//	NU_FUNC_IMDB(send_request_search_title);
+//
+//#undef NU_FUNC_IMDB
+//
+//#undef NU_FUNC
 
 	mediaplayers.push_back(nu_mediaplayer(_T("mpc-hc.exe")));
 
@@ -771,10 +389,10 @@ user_info_t::user_info_t(const std::string &username, const std::string &passwor
 
 user_info_t::~user_info_t()
 {
-	for(std::vector<site_info_t>::iterator it = sites.begin(); it != sites.end(); ++it)
-	{
-		delete it->http;
-	}
+	//for(std::vector<site_info_t>::iterator it = sites.begin(); it != sites.end(); ++it)
+	//{
+	//	delete it->http;
+	//}
 }
 
 void user_info_t::on_timer(Poco::Timer& timer)
@@ -895,7 +513,7 @@ bool user_info_t::load()
 		;//return false;
 
 	for(uint32_t i = 0; i < site_users.size(); ++i)
-		if(!load_data(options, sites[site_users[i].site_index].name, "site", CLOSURE(&sites[site_users[i].site_index], &site_info_t::read)))
+		if(!load_data(options, sites[site_users[i].site_index]->name, "site", CLOSURE(sites[site_users[i].site_index], &site_info_t::read)))
 			return false;
 
 	if(site_users.empty())
@@ -912,7 +530,7 @@ bool user_info_t::load()
 bool user_info_t::save()
 {
 	for(uint32_t i = 0; i < site_users.size(); ++i)
-		if(!save_data(options, sites[site_users[i].site_index].name, "site", CLOSURE(&sites[site_users[i].site_index], &site_info_t::write)))
+		if(!save_data(options, sites[site_users[i].site_index]->name, "site", CLOSURE(sites[site_users[i].site_index], &site_info_t::write)))
 			return false;
 
 	if(!save_data(options, username, "user", CLOSURE(this, &user_info_t::write)))
@@ -931,12 +549,12 @@ bool user_info_t::init()
 
 	if(!site_users.back().login_cookies.empty())
 		for(std::map<std::string, std::string>::const_iterator login_cookies_it = site_users.back().login_cookies.begin(); login_cookies_it != site_users.back().login_cookies.end(); ++login_cookies_it)
-			sites.back().http->combined_cookies.push_back(HTTPCookie(login_cookies_it->first, login_cookies_it->second));
+			sites.back()->http->combined_cookies.push_back(HTTPCookie(login_cookies_it->first, login_cookies_it->second));
 	else
-		if(!sites.back().authenticate(site_users.back()))
+		if(!sites.back()->authenticate(site_users.back()))
 			return false;
 		else
-			for(std::vector<HTTPCookie>::const_iterator combined_cookies_it = sites.back().http->combined_cookies.begin(); combined_cookies_it != sites.back().http->combined_cookies.end(); ++combined_cookies_it)
+			for(std::vector<HTTPCookie>::const_iterator combined_cookies_it = sites.back()->http->combined_cookies.begin(); combined_cookies_it != sites.back()->http->combined_cookies.end(); ++combined_cookies_it)
 				site_users.back().login_cookies[combined_cookies_it->getName()] = combined_cookies_it->getValue();
 
 	title_info_t title;
@@ -1017,12 +635,12 @@ bool user_info_t::init()
 bool user_info_t::set_title_episodes_watched_num(uint32_t si, uint32_t i, uint32_t episodes_watched_num)
 {
 	if(site_users[si].user_titles[i].status == NU_TITLE_STATUS_NOT_ADDED || site_users[si].user_titles[i].status == NU_TITLE_STATUS_PLAN_TO_WATCH)
-		if(sites[site_users[si].site_index].send_request_change_title_status(site_users[si], site_users[si].user_titles[i].index, NU_TITLE_STATUS_WATCHING))
+		if(sites[site_users[si].site_index]->send_request_change_title_status(site_users[si], site_users[si].user_titles[i].index, NU_TITLE_STATUS_WATCHING))
 			site_users[si].user_titles[i].status = NU_TITLE_STATUS_WATCHING;
 		else
 			return false;
 
-	if(sites[site_users[si].site_index].send_request_change_title_episodes_watched_num(site_users[si], site_users[si].user_titles[i].index, episodes_watched_num))
+	if(sites[site_users[si].site_index]->send_request_change_title_episodes_watched_num(site_users[si], site_users[si].user_titles[i].index, episodes_watched_num))
 		site_users[si].user_titles[i].episodes_watched_num = episodes_watched_num;
 	else
 		return false;
@@ -1045,23 +663,23 @@ bool user_info_t::add_title(uint32_t si, title_info_t &title, uint32_t status)
 {
 	//if(!title.uri.empty())
 	{
-		if(!sites[site_users[si].site_index].parse_title_info(site_users[si], /*title.name, */title.uri, title))
+		if(!sites[site_users[si].site_index]->parse_title_info(site_users[si], /*title.name, */title.uri, title))
 			return false;
 	}
 
 	user_title_info_t user_title = { 0 };
 
-	user_title.index = sites[site_users[si].site_index].titles.size();
+	user_title.index = sites[site_users[si].site_index]->titles.size();
 
 	//if(!title.uri.empty())
 	{
-		if(!sites[site_users[si].site_index].parse_user_title_info(site_users[si], title, user_title))
+		if(!sites[site_users[si].site_index]->parse_user_title_info(site_users[si], title, user_title))
 			return false;
 	}
 
 	if(user_title.status != status)
 	{
-		if(!sites[site_users[si].site_index].send_request_add_title(site_users[si], title, status))
+		if(!sites[site_users[si].site_index]->send_request_add_title(site_users[si], title, status))
 			return false;
 
 		user_title.status = status;
@@ -1069,9 +687,9 @@ bool user_info_t::add_title(uint32_t si, title_info_t &title, uint32_t status)
 
 	site_users[si].user_titles.push_back(user_title);
 
-	sites[site_users[si].site_index].titles.push_back(title);
+	sites[site_users[si].site_index]->titles.push_back(title);
 
-	add_to_history(NU_ACT_ADD_TITLE, _FS(_T("\"%s\" on %s"), GW_A2T(title.name), GW_A2T(sites[site_users[si].site_index].name)));
+	add_to_history(NU_ACT_ADD_TITLE, _FS(_T("\"%s\" on %s"), GW_A2T(title.name), GW_A2T(sites[site_users[si].site_index]->name)));
 
 	return true;
 }
@@ -1088,7 +706,7 @@ bool user_info_t::add_title(title_info_t &title, uint32_t status)
 
 bool user_info_t::search_title(uint32_t si, const std::string &title_name, std::vector<title_info_t> &found_titles)
 {
-	return sites[site_users[si].site_index].send_request_search_title(site_users[si], title_name, found_titles);
+	return sites[site_users[si].site_index]->send_request_search_title(site_users[si], title_name, found_titles);
 }
 
 bool user_info_t::search_title(const std::string &title_name, std::vector<title_info_t> &found_titles)
@@ -1171,7 +789,7 @@ static bool Items_TitleStylerBegin(void* data, int idx)
 	user_info_t *user_info = (user_info_t *) data;
 
 	bool already_added = false;
-	for(std::vector<title_info_t>::const_iterator it = user_info->sites[0].titles.begin(); it != user_info->sites[0].titles.end(); ++it)
+	for(std::vector<title_info_t>::const_iterator it = user_info->sites[0]->titles.begin(); it != user_info->sites[0]->titles.end(); ++it)
 		if(it->name == user_info->last_found_titles[idx].name)
 		{
 			already_added = true;
@@ -1237,14 +855,14 @@ int user_info_t::main()
 	ImGui::Text("Current site: ");
 	ImGui::SameLine();
 	int new_current_site = current_site;
-	if(ImGui::Combo("##current_site", &new_current_site, Items_SiteNameGetter, &sites[0], sites.size()))
+	if(ImGui::Combo("##current_site", &new_current_site, Items_SiteNameGetter, sites[0], sites.size()))
 		if(new_current_site != current_site)
 		{
 			current_title_index = 0;
 
 			for(uint32_t i = 0; i < site_users[new_current_site].user_titles.size(); ++i)
-				if(sites[site_users[new_current_site].site_index].titles[site_users[new_current_site].user_titles[i].index].name == 
-				   sites[site_users[    current_site].site_index].titles[site_users[    current_site].user_titles[current_title_index].index].name)
+				if(sites[site_users[new_current_site].site_index]->titles[site_users[new_current_site].user_titles[i].index].name == 
+				   sites[site_users[    current_site].site_index]->titles[site_users[    current_site].user_titles[current_title_index].index].name)
 				{
 					current_title_index = i;
 				}
@@ -1307,7 +925,7 @@ int user_info_t::titlelist_ui()
 	{
 		ImGui::PushStyleColor(ImGuiCol_Text, current_site == si ? selected_color : normal_color);
 
-		if(ImGui::Checkbox(sites[site_users[si].site_index].name.c_str(), &site_users[si].enabled))
+		if(ImGui::Checkbox(sites[site_users[si].site_index]->name.c_str(), &site_users[si].enabled))
 			set_current_site_next_to(si);
 
 		ImGui::PopStyleColor();
@@ -1321,9 +939,9 @@ int user_info_t::titlelist_ui()
 		{
 			//ImGui::PushStyleColor(ImGuiCol_Text, current_site == si ? selected_color : normal_color);
 
-			ImGui::PushStyleColor(ImGuiCol_Button, sites[site_users[si].site_index].color);
+			ImGui::PushStyleColor(ImGuiCol_Button, sites[site_users[si].site_index]->color);
 
-			if(ImGui::Button(("Sync with " + sites[site_users[si].site_index].url).c_str()))
+			if(ImGui::Button(("Sync with " + sites[site_users[si].site_index]->url).c_str()))
 				for(uint32_t k = 0; k < site_users.size(); ++k)
 					if(k != si)
 						if(sync(si, k))
@@ -1483,12 +1101,12 @@ int user_info_t::titlelist_ui()
 
 			switch(i)
 			{
-				case 0: cell_str = std::to_string(sites[site_users[site_user_index].site_index].titles[site_users[site_user_index].user_titles[user_title_index].index].id); break;
-				case 1: cell_str = sites[site_users[site_user_index].site_index].titles[site_users[site_user_index].user_titles[user_title_index].index].name; break;
-				case 2: cell_str = std::to_string(sites[site_users[site_user_index].site_index].titles[site_users[site_user_index].user_titles[user_title_index].index].year); break;
-				case 3: cell_str = sites[site_users[site_user_index].site_index].title_types[sites[site_users[site_user_index].site_index].title_type_ids[sites[site_users[site_user_index].site_index].titles[site_users[site_user_index].user_titles[user_title_index].index].type]]; break;
-				case 4: cell_str = Poco::NumberFormatter::format(site_users[site_user_index].user_titles[user_title_index].rating * sites[site_users[site_user_index].site_index].rating_mulcoef); break;
-				case 5: cell_str = Poco::NumberFormatter::format(sites[site_users[site_user_index].site_index].titles[site_users[site_user_index].user_titles[user_title_index].index].average_rating * sites[site_users[site_user_index].site_index].rating_mulcoef); break;
+				case 0: cell_str = std::to_string(sites[site_users[site_user_index].site_index]->titles[site_users[site_user_index].user_titles[user_title_index].index].id); break;
+				case 1: cell_str = sites[site_users[site_user_index].site_index]->titles[site_users[site_user_index].user_titles[user_title_index].index].name; break;
+				case 2: cell_str = std::to_string(sites[site_users[site_user_index].site_index]->titles[site_users[site_user_index].user_titles[user_title_index].index].year); break;
+				case 3: cell_str = sites[site_users[site_user_index].site_index]->title_types[sites[site_users[site_user_index].site_index]->title_type_ids[sites[site_users[site_user_index].site_index]->titles[site_users[site_user_index].user_titles[user_title_index].index].type]]; break;
+				case 4: cell_str = Poco::NumberFormatter::format(site_users[site_user_index].user_titles[user_title_index].rating * sites[site_users[site_user_index].site_index]->rating_mulcoef); break;
+				case 5: cell_str = Poco::NumberFormatter::format(sites[site_users[site_user_index].site_index]->titles[site_users[site_user_index].user_titles[user_title_index].index].average_rating * sites[site_users[site_user_index].site_index]->rating_mulcoef); break;
 				case 6: cell_str = site_users[site_user_index].user_titles[user_title_index].last_updated == Poco::Timestamp::TIMEVAL_MIN ? "N/A" : Poco::DateTimeFormatter::format(site_users[site_user_index].user_titles[user_title_index].last_updated, Poco::DateTimeFormat::SORTABLE_FORMAT); break;
 			}
 
@@ -1496,7 +1114,7 @@ int user_info_t::titlelist_ui()
 			sprintf(buffer, "%s##cell%dx%d", cell_str.c_str(), i, k);
 			ImGui::PushStyleColor(ImGuiCol_Text, selected ? selected_color : normal_color);
 
-			ImVec4 color = sites[site_users[site_user_index].site_index].color;
+			ImVec4 color = sites[site_users[site_user_index].site_index]->color;
 
 			if(selected || listItemHovered == k)
 				color = ImVec4(0.40f, 0.40f, 0.90f, 0.45f);
@@ -1504,7 +1122,7 @@ int user_info_t::titlelist_ui()
 				for(uint32_t si = 0; si < site_users.size(); ++si)
 					if(si != site_user_index && site_users[si].enabled)
 						if(has_title(si, site_user_index, user_title_index))
-							color = ImLerp(color, sites[site_users[si].site_index].color, 0.5f);
+							color = ImLerp(color, sites[site_users[si].site_index]->color, 0.5f);
 
 			ImGui::PushStyleColor(ImGuiCol_Header, color);
 
@@ -1582,26 +1200,26 @@ void user_info_t::title_ui(int &current_title_status)
 {
 	Poco::FastMutex::ScopedLock lock(mutex);
 
-	if(sites[site_users[current_site].site_index].titles.empty())
+	if(sites[site_users[current_site].site_index]->titles.empty())
 		return;
 
-	if(!sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_thumb_uri.empty())
+	if(!sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_thumb_uri.empty())
 	{
-		if(sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.empty())
+		if(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.empty())
 		{
-			sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data = sites[site_users[current_site].site_index].http->go_to(sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_thumb_uri, sites[site_users[current_site].site_index].login_cookie);
+			sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data = sites[site_users[current_site].site_index]->http->go_to(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_thumb_uri, sites[site_users[current_site].site_index]->login_cookie);
 		}
 
-		if(!sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.empty() && !sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_texture.handle)
+		if(!sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.empty() && !sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture.handle)
 		{
-			ImplDX9_LoadImage(sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.c_str(), sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.size(), sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_texture);
+			ImplDX9_LoadImage(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.c_str(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.size(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture);
 		}
 	}
 
 	ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
 	float tex_w = get_cover_width(current_title_index);
 	float tex_h = get_cover_height(current_title_index);
-	ImTextureID tex_id = sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].cover_texture.handle; //ImGui::GetIO().Fonts->TexID;
+	ImTextureID tex_id = sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture.handle; //ImGui::GetIO().Fonts->TexID;
 	if(tex_id)
 	{
 		ImGui::Image(tex_id, ImVec2(tex_w, tex_h), ImVec2(0,0), ImVec2(1,1), ImColor(0,0,0,255), ImColor(255,255,255,128));
@@ -1624,12 +1242,12 @@ void user_info_t::title_ui(int &current_title_status)
 	ImGui::BeginGroup();
 	ImGui::PushItemWidth(-1);
 
-	ImGui::TextColored(ImColor(255, 0, 0), "%s (%d)", sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].name.c_str(), sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].year);
+	ImGui::TextColored(ImColor(255, 0, 0), "%s (%d)", sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].name.c_str(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].year);
 	ImGui::Separator();
 	//if(user_titles[current_title_index].status != NU_TITLE_STATUS_NOT_ADDED && user_titles[current_title_index].status != NU_TITLE_STATUS_PLAN_TO_WATCH)
 	{
-		ImGui::Text("Type: %s", sites[site_users[current_site].site_index].title_types[sites[site_users[current_site].site_index].title_type_ids[sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].type]].c_str());
-		if(sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].episodes_num > 1)
+		ImGui::Text("Type: %s", sites[site_users[current_site].site_index]->title_types[sites[site_users[current_site].site_index]->title_type_ids[sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].type]].c_str());
+		if(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].episodes_num > 1)
 		{
 			ImGui::AlignFirstTextHeightToWidgets();
 			ImGui::Text("Episodes: ");
@@ -1638,18 +1256,18 @@ void user_info_t::title_ui(int &current_title_status)
 			const char *current_title_episodes_watched_num_str = 0;
 			Items_IndexNumberArrayGetter(0, current_title_episodes_watched_num, &current_title_episodes_watched_num_str);
 			ImGui::PushItemWidth(ImGui::CalcTextSize(current_title_episodes_watched_num_str).x + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::GetStyle().FramePadding.x + ImGui::GetWindowFontSize() + ImGui::GetStyle().FramePadding.x * 2.0f);
-			if(ImGui::Combo("##episodes_watched_num", &current_title_episodes_watched_num, Items_IndexNumberArrayGetter, 0, sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].episodes_num + 1))
+			if(ImGui::Combo("##episodes_watched_num", &current_title_episodes_watched_num, Items_IndexNumberArrayGetter, 0, sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].episodes_num + 1))
 			{
 				set_title_episodes_watched_num(current_title_index, current_title_episodes_watched_num);
 			}
 			ImGui::PopItemWidth();
 			ImGui::SameLine();
-			ImGui::Text(" of %d", sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].episodes_num);
+			ImGui::Text(" of %d", sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].episodes_num);
 		}
 		else
-			ImGui::Text("Episodes: %d of %d", site_users[current_site].user_titles[current_title_index].episodes_watched_num, sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].episodes_num);
+			ImGui::Text("Episodes: %d of %d", site_users[current_site].user_titles[current_title_index].episodes_watched_num, sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].episodes_num);
 		ImGui::SameLine();
-		if(ImGui::Button("+") && site_users[current_site].user_titles[current_title_index].episodes_watched_num < sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].episodes_num)
+		if(ImGui::Button("+") && site_users[current_site].user_titles[current_title_index].episodes_watched_num < sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].episodes_num)
 		{
 			uint32_t current_title_episodes_watched_num = site_users[current_site].user_titles[current_title_index].episodes_watched_num + 1;
 
@@ -1671,13 +1289,13 @@ void user_info_t::title_ui(int &current_title_status)
 	ImGui::Text("Status: ");
 	ImGui::SameLine();
 	current_title_status = (int) site_users[current_site].user_titles[current_title_index].status;
-	if(ImGui::Combo("##status", &current_title_status, &sites[site_users[current_site].site_index].title_statuses[0], sites[site_users[current_site].site_index].title_statuses.size()))
-		if(sites[site_users[current_site].site_index].send_request_change_title_status(site_users[current_site], site_users[current_site].user_titles[current_title_index].index, current_title_status))
+	if(ImGui::Combo("##status", &current_title_status, &sites[site_users[current_site].site_index]->title_statuses[0], sites[site_users[current_site].site_index]->title_statuses.size()))
+		if(sites[site_users[current_site].site_index]->send_request_change_title_status(site_users[current_site], site_users[current_site].user_titles[current_title_index].index, current_title_status))
 		{
 			site_users[current_site].user_titles[current_title_index].status = current_title_status;
 
 			if(site_users[current_site].user_titles[current_title_index].status == NU_TITLE_STATUS_NOT_ADDED)
-				current_title_index = sites[site_users[current_site].site_index].remove_title(site_users[current_site], current_title_index);
+				current_title_index = sites[site_users[current_site].site_index]->remove_title(site_users[current_site], current_title_index);
 
 			//if(user_titles[current_title_index].status == NU_TITLE_STATUS_WATCHED)
 			//	ask_to_write_review();
@@ -1691,7 +1309,7 @@ void user_info_t::title_ui(int &current_title_status)
 	else
 	{
 		int current_title_rating_max = 10;
-		float current_title_rating = site_users[current_site].user_titles[current_title_index].rating * sites[site_users[current_site].site_index].rating_mulcoef;
+		float current_title_rating = site_users[current_site].user_titles[current_title_index].rating * sites[site_users[current_site].site_index]->rating_mulcoef;
 		int current_title_rating_index = floorf(current_title_rating + 0.5f);
 		const char *current_title_rating_str = 0;
 		Items_IndexNumberArrayGetter(0, current_title_rating, &current_title_rating_str);
@@ -1699,14 +1317,14 @@ void user_info_t::title_ui(int &current_title_status)
 		if(ImGui::Combo("##rating", &current_title_rating_index, Items_IndexNumberArrayGetter, 0, current_title_rating_max + 1))
 		{
 			current_title_rating = (float) current_title_rating_index;
-			if(sites[site_users[current_site].site_index].send_request_change_title_rating(site_users[current_site], site_users[current_site].user_titles[current_title_index].index, current_title_rating))
-				site_users[current_site].user_titles[current_title_index].rating = current_title_rating / sites[site_users[current_site].site_index].rating_mulcoef;
+			if(sites[site_users[current_site].site_index]->send_request_change_title_rating(site_users[current_site], site_users[current_site].user_titles[current_title_index].index, current_title_rating))
+				site_users[current_site].user_titles[current_title_index].rating = current_title_rating / sites[site_users[current_site].site_index]->rating_mulcoef;
 		}
 		ImGui::PopItemWidth();
 	}
-	ImGui::Text("Average score: %.3f of 10 (%d votes, rank #%d)", sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].average_rating * sites[site_users[current_site].site_index].rating_mulcoef,
-																		 sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].votes_num,
-																		 sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[current_title_index].index].rank);
+	ImGui::Text("Average score: %.3f of 10 (%d votes, rank #%d)", sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].average_rating * sites[site_users[current_site].site_index]->rating_mulcoef,
+																		 sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].votes_num,
+																		 sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].rank);
 	}
 
 	ImGui::PopItemWidth();
@@ -1715,18 +1333,18 @@ void user_info_t::title_ui(int &current_title_status)
 
 float user_info_t::get_cover_width(uint32_t i)
 {
-	return sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[i].index].cover_texture.w * sites[site_users[current_site].site_index].cover_image_scale_x;
+	return sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[i].index].cover_texture.w * sites[site_users[current_site].site_index]->cover_image_scale_x;
 }
 
 float user_info_t::get_cover_height(uint32_t i)
 {
-	return sites[site_users[current_site].site_index].titles[site_users[current_site].user_titles[i].index].cover_texture.h * sites[site_users[current_site].site_index].cover_image_scale_y;
+	return sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[i].index].cover_texture.h * sites[site_users[current_site].site_index]->cover_image_scale_y;
 }
 
 uint32_t user_info_t::get_user_title_index(uint32_t si, const std::string &title_name)
 {
 	for(uint32_t i = 0; i < site_users[si].user_titles.size(); ++i)
-		if(sites[site_users[si].site_index].titles[site_users[si].user_titles[i].index].name == title_name)
+		if(sites[site_users[si].site_index]->titles[site_users[si].user_titles[i].index].name == title_name)
 			return i;
 
 	return GW_NOT_FOUND;
@@ -1736,14 +1354,14 @@ uint32_t user_info_t::get_user_title_index_parse(uint32_t si, const std::string 
 {
 	uint32_t title_index = GW_NOT_FOUND;
 
-	for(uint32_t i = 0; i < sites[site_users[si].site_index].titles.size(); ++i)
-		if(sites[site_users[si].site_index].titles[i].name.c_str() == title_name)
+	for(uint32_t i = 0; i < sites[site_users[si].site_index]->titles.size(); ++i)
+		if(sites[site_users[si].site_index]->titles[i].name.c_str() == title_name)
 		{
 			user_title_info_t user_title = { 0 };
 
 			user_title.index = i;
 
-			if(!sites[site_users[si].site_index].parse_user_title_info(site_users[si], user_title))
+			if(!sites[site_users[si].site_index]->parse_user_title_info(site_users[si], user_title))
 				break;
 
 			site_users[si].user_titles.push_back(user_title);
@@ -1776,15 +1394,15 @@ uint32_t user_info_t::find_and_add_title(uint32_t si, const std::string &title_n
 
 bool user_info_t::authenticate()
 {
-	return sites[site_users[current_site].site_index].authenticate(site_users[current_site]);
+	return sites[site_users[current_site].site_index]->authenticate(site_users[current_site]);
 }
 
 bool user_info_t::sync(uint32_t i, uint32_t k)
 {
 	try
 	{
-		//return sites[site_users[i].site_index].sync(username, password, site_users[k]);
-		return sites[site_users[i].site_index].sync(username, password, site_users[i]);
+		//return sites[site_users[i].site_index]->sync(username, password, site_users[k]);
+		return sites[site_users[i].site_index]->sync(username, password, site_users[i]);
 	}
 	catch(Exception& exc)
 	{
@@ -1807,8 +1425,8 @@ bool user_info_t::has_title(uint32_t si, uint32_t site_user_index, uint32_t user
 {
 	for(uint32_t i = 0; i < site_users[si].user_titles.size(); ++i)
 		if((i != user_title_index || si != site_user_index) && 
-			sites[site_users[si             ].site_index].titles[site_users[si             ].user_titles[i].index].name == 
-			sites[site_users[site_user_index].site_index].titles[site_users[site_user_index].user_titles[user_title_index].index].name)
+			sites[site_users[si             ].site_index]->titles[site_users[si             ].user_titles[i].index].name == 
+			sites[site_users[site_user_index].site_index]->titles[site_users[site_user_index].user_titles[user_title_index].index].name)
 		{
 			return true;
 		}
