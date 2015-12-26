@@ -564,11 +564,23 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\nu_anime_planet_site_info.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\nu_http_session.cpp"
 				>
 			</File>
 			<File
+				RelativePath=".\src\nu_imdb_site_info.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\nu_mediaplayer.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\src\nu_myanimelist_site_info.cpp"
 				>
 			</File>
 			<File
@@ -636,11 +648,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\nu_anime_planet_site_info.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\nu_history.h"
 				>
 			</File>
 			<File
 				RelativePath=".\src\nu_http_session.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\nu_imdb_site_info.h"
 				>
 			</File>
 			<File
@@ -652,11 +672,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\nu_myanimelist_site_info.h"
+				>
+			</File>
+			<File
 				RelativePath=".\src\nu_options.h"
 				>
 			</File>
 			<File
 				RelativePath=".\src\nu_site_info.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\nu_site_parser.h"
 				>
 			</File>
 			<File

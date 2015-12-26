@@ -217,4 +217,6 @@ inline float clampf(float x, float a, float b)
 #define SAFE_DELETE_ARRAY(p) { if(p) { delete [] (p);  (p) = NULL; } }
 #define SAFE_RELEASE(p)      { if(p) { (p)->Release(); (p) = NULL; } }
 //-----------------------------------------------------------------------------------
+#define NU_ERROR(x) { std::cout << x << std::endl; DebugBreak(); }
+//-----------------------------------------------------------------------------------
 #endif

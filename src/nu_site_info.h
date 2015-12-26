@@ -10,11 +10,11 @@
 #ifndef NU_SITE_INFO_H
 #define NU_SITE_INFO_H
 //-----------------------------------------------------------------------------------
-#include "closure.h"
-
 #include "nu_http_session.h"
 
 #include "nu_xml.h"
+
+#include "nu_site_parser.h"
 
 #include "Poco//Timestamp.h"
 
@@ -103,13 +103,6 @@ struct title_info_t
 	PUGI_SERIALIZATION_END
 };
 
-struct parser_entity_t
-{
-	std::string xpath, regexp;
-
-	parser_entity_t(std::string xpath = "", std::string regexp = "") : xpath(xpath), regexp(regexp) {}
-};
-
 struct site_parser_info_t
 {
 	parser_entity_t titlelist_uri, titlelist_next_page_uri, titlelist_title_name, titlelist_title_uri, title_cover_thumb_uri, title_cover_uri;
@@ -127,11 +120,10 @@ struct site_parser_info_t
 
 	//site_parser_info_t() {}
 };
-
 //-----------------------------------------------------------------------------------
 struct user_title_info_t;
 struct site_user_info_t;
-
+//-----------------------------------------------------------------------------------
 struct site_info_t
 {
 	std::string name, url, login_uri, login_cookie;
@@ -235,108 +227,6 @@ struct site_info_t
 		return true;
 	}
 	PUGI_SERIALIZATION_END
-};
-
-struct anime_planet_site_info_t : site_info_t
-{
-	anime_planet_site_info_t();
-
-	virtual bool authenticate(site_user_info_t &site_user);
-
-	virtual bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user);
-
-	virtual bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
-
-	virtual bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
-
-	virtual bool send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating);
-
-	virtual bool send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
-
-	virtual bool send_request_delete_title(site_user_info_t &site_user, const title_info_t &title);
-
-	virtual bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
-
-	virtual bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
-};
-
-struct myanimelist_site_info_t : site_info_t
-{
-	myanimelist_site_info_t();
-
-	bool import(const std::string &xml_str, site_user_info_t &site_user);
-	bool import(pugi::xml_node &xml_doc_node, site_user_info_t &site_user);
-
-	virtual bool parse_title_info_by_id(site_user_info_t &site_user, title_info_t &title);
-
-	bool parse_title_info_search_entry(pugi::xml_node &node, title_info_t &title);
-
-	bool parse_user_title_info(pugi::xml_node &node, user_title_info_t &user_title);
-
-	virtual bool authenticate(site_user_info_t &site_user);
-
-	virtual bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user);
-
-	virtual bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
-
-	virtual bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
-
-	virtual bool send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating);
-
-	virtual bool send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
-
-	virtual bool send_request_delete_title(site_user_info_t &site_user, const title_info_t &title);
-
-	virtual bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
-
-	virtual bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
-};
-//-----------------------------------------------------------------------------------
-struct imdb_list_t
-{
-	std::string name;
-	std::string list_id, list_class;
-
-	uint32_t status;
-};
-
-struct imdb_site_info_t : site_info_t
-{
-	std::vector<imdb_list_t> imdb_lists;
-
-	imdb_site_info_t();
-
-	std::string imdb_get_title_id_str(const title_info_t &title);
-
-	std::string imdb_get_title_id(const std::string &title_name);
-	std::string imdb_get_auth_token(const std::string &imdb_title_id);
-
-	bool send_request_get_title_rating(site_user_info_t &site_user, const title_info_t &title, float &rating);
-
-	bool send_request_change_title_rating_imdb_ajax(site_user_info_t &site_user, const title_info_t &title, float rating);
-
-	bool send_request_get_list_item_id_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, std::string &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key);
-	bool send_request_delete_title_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list);
-
-	bool authenticate_imdb_with_tesseract(site_user_info_t &site_user);
-
-	virtual bool authenticate(site_user_info_t &site_user);
-
-	virtual bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user);
-
-	virtual bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
-
-	virtual bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
-
-	virtual bool send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating);
-
-	virtual bool send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
-
-	virtual bool send_request_delete_title(site_user_info_t &site_user, const title_info_t &title);
-
-	virtual bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
-
-	virtual bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
 };
 //-----------------------------------------------------------------------------------
 #endif
