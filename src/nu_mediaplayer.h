@@ -37,6 +37,8 @@ int get_title_filename_info_anitomy(const char_t *filename, title_filename_info_
 int get_title_filename_info_guessit_local(const char_t *filename, title_filename_info_t *title_filename_info);
 int get_title_filename_info_guessit_online(const char_t *filename, title_filename_info_t *title_filename_info);
 
+HWND get_mediaplayer_handle(const char_t *mediaplayer);
+
 struct nu_mediaplayer
 {
 	string_t name;
@@ -62,6 +64,24 @@ struct nu_mediaplayer
 	{
 		for(std::vector<get_title_filename_cleanup_proc>::const_iterator it = get_title_filename_cleanup_p.begin(); it != get_title_filename_cleanup_p.end(); ++it)
 			(*it)(name.c_str());
+	}
+
+	HWND get_handle() const
+	{
+		return get_mediaplayer_handle(name.c_str());
+	}
+
+	bool get_title_filename(string_t &title_filename_str) const
+	{
+		char_t title_filename_buffer[MAX_PATH];
+		for(std::vector<get_title_filename_proc>::const_iterator it = get_title_filename_p.begin(); it != get_title_filename_p.end(); ++it)
+			if((*it)(name.c_str(), title_filename_buffer, countof(title_filename_buffer)) != 0)
+			{
+				title_filename_str = title_filename_buffer;
+				return true;
+			}
+
+		return false;
 	}
 
 	string_t get_title_filename() const

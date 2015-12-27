@@ -87,22 +87,6 @@ user_info_t::user_info_t(const std::string &username, const std::string &passwor
 
 	sites.push_back(new imdb_site_info_t());
 
-//#define NU_FUNC_IMDB(x) NU_FUNC(x, imdb)
-//
-//	NU_FUNC_IMDB(authenticate);
-//	NU_FUNC_IMDB(parse_title_info);
-//	NU_FUNC_IMDB(sync);
-//	//NU_FUNC_IMDB(send_request_change_title_episodes_watched_num);
-//	NU_FUNC_IMDB(send_request_change_title_status);
-//	NU_FUNC_IMDB(send_request_change_title_rating);
-//	NU_FUNC_IMDB(send_request_add_title);
-//	NU_FUNC_IMDB(send_request_delete_title);
-//	NU_FUNC_IMDB(send_request_search_title);
-//
-//#undef NU_FUNC_IMDB
-//
-//#undef NU_FUNC
-
 	mediaplayers.push_back(nu_mediaplayer(_T("mpc-hc.exe")));
 
 	show_title_popup = false;
@@ -112,10 +96,6 @@ user_info_t::user_info_t(const std::string &username, const std::string &passwor
 
 user_info_t::~user_info_t()
 {
-	//for(std::vector<site_info_t>::iterator it = sites.begin(); it != sites.end(); ++it)
-	//{
-	//	delete it->http;
-	//}
 }
 
 void user_info_t::on_timer(Poco::Timer& timer)
@@ -125,8 +105,47 @@ void user_info_t::on_timer(Poco::Timer& timer)
 	//GetProcessList();
 	for(std::vector<nu_mediaplayer>::const_iterator it = mediaplayers.begin(); it != mediaplayers.end(); ++it)
 	{
-		string_t title_filename = it->get_title_filename();
+		//string_t title_filename = it->get_title_filename();
+		string_t title_filename;
+		bool has_new_title_filename = it->get_title_filename(title_filename);
 		tcout << title_filename << std::endl;
+
+		if(has_new_title_filename || !it->get_handle())
+		{
+			if(!last_title.title.empty())
+			{
+				uint32_t (user_info_t::*get_user_title_index_procs[])(uint32_t si, const std::string &title_name) =
+				{
+					&user_info_t::get_user_title_index,		  // find in user's titlelist
+					&user_info_t::get_user_title_index_parse, // find in site's titlelist
+					&user_info_t::find_and_add_title
+				};
+
+				//bool title_found = false;
+				uint32_t title_index = GW_NOT_FOUND;
+
+				for(uint32_t si = 0; si < site_users.size(); ++si)
+					if(site_users[si].enabled)
+					{
+						for(uint32_t i = 0; i < countof(get_user_title_index_procs); ++i)
+						{
+							title_index = (this->*get_user_title_index_procs[i])(si, GW_T2A(last_title.title.c_str()));
+
+							if(title_index != GW_NOT_FOUND)
+							{
+								set_title_rating(si, title_index, 3);
+								show_title_popup = true;
+								break;
+								//title_found = true;
+							}
+						}
+
+						//if(title_found)
+						//	break;
+					}
+			}
+			last_title = title_filename_info_t();
+		}
 
 		if(!title_filename.empty())
 		{
@@ -382,6 +401,33 @@ bool user_info_t::set_title_episodes_watched_num(uint32_t i, uint32_t episodes_w
 	return true;
 }
 
+bool user_info_t::set_title_rating(uint32_t si, uint32_t i, float rating)
+{
+	if(site_users[si].user_titles[i].status != NU_TITLE_STATUS_WATCHED)
+		if(sites[site_users[si].site_index]->send_request_change_title_status(site_users[si], site_users[si].user_titles[i].index, NU_TITLE_STATUS_WATCHED))
+			site_users[si].user_titles[i].status = NU_TITLE_STATUS_WATCHED;
+		else
+			return false;
+
+	if(sites[site_users[si].site_index]->send_request_change_title_rating(site_users[si], site_users[si].user_titles[i].index, rating))
+		site_users[si].user_titles[i].rating = rating;
+	else
+		return false;
+
+	return true;
+}
+
+bool user_info_t::set_title_rating(uint32_t i, float rating)
+{
+	for(uint32_t si = 0; si < site_users.size(); ++si)
+		if(site_users[si].enabled)
+			if(si == current_site || has_title(si, current_site, i))
+				if(!set_title_rating(si, i, rating))
+					return false;
+
+	return true;
+}
+
 bool user_info_t::add_title(uint32_t si, title_info_t &title, uint32_t status)
 {
 	//if(!title.uri.empty())
@@ -560,10 +606,10 @@ static bool Items_IndexNumberArrayGetter(void* data, int idx, const char** out_t
 
 static bool Items_SiteNameGetter(void* data, int idx, const char** out_text)
 {
-	site_info_t *sites = (site_info_t *) data;
+	std::vector<site_info_t *> &sites = *(std::vector<site_info_t *> *) data;
 
 	if(out_text)
-		*out_text = _FS_narrow("%s (%s)", sites[idx].name.c_str(), sites[idx].url.c_str());
+		*out_text = _FS_narrow("%s (%s)", sites[idx]->name.c_str(), sites[idx]->url.c_str());
 	return true;
 }
 
@@ -578,7 +624,7 @@ int user_info_t::main()
 	ImGui::Text("Current site: ");
 	ImGui::SameLine();
 	int new_current_site = current_site;
-	if(ImGui::Combo("##current_site", &new_current_site, Items_SiteNameGetter, sites[site_users[current_site].site_index], sites.size()))
+	if(ImGui::Combo("##current_site", &new_current_site, Items_SiteNameGetter, &sites, sites.size()))
 		if(new_current_site != current_site)
 		{
 			current_title_index = 0;
@@ -666,9 +712,10 @@ int user_info_t::titlelist_ui()
 
 			if(ImGui::Button(("Sync with " + sites[site_users[si].site_index]->url).c_str()))
 				for(uint32_t k = 0; k < site_users.size(); ++k)
-					if(k != si)
-						if(sync(si, k))
-							current_site = si;
+					if(site_users[k].enabled)
+						//if(k != si)
+							if(sync(si, k))
+								current_site = si;
 
 			ImGui::PopStyleColor();
 

@@ -142,6 +142,10 @@ struct user_info_t
 
 	bool set_title_episodes_watched_num(uint32_t i, uint32_t episodes_watched_num);
 
+	bool set_title_rating(uint32_t si, uint32_t i, float rating);
+
+	bool set_title_rating(uint32_t i, float rating);
+
 	bool add_title(uint32_t si, title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
 
 	bool add_title(title_info_t &title, uint32_t status = NU_TITLE_STATUS_PLAN_TO_WATCH);
