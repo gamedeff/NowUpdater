@@ -10,8 +10,9 @@
 #include "nu_anime_planet_site_info.h"
 //-----------------------------------------------------------------------------------
 #include "nu_user_info.h"
-//-----------------------------------------------------------------------------------
 #include "nu_json.h"
+//-----------------------------------------------------------------------------------
+#include <cwctype>
 //-----------------------------------------------------------------------------------
 anime_planet_site_info_t::anime_planet_site_info_t()
 {
@@ -306,7 +307,7 @@ bool anime_planet_site_info_t::parse_title_info(pugi::xml_node &node, site_user_
 		// remove line breaks:
 		//title.name.erase(std::remove_if(title.name.begin(), title.name.end(), std::iscntrl), title.name.end());
 		//replace_whitespace(title.name);
-		std::replace_if(title.name.begin(), title.name.end(), std::iscntrl, ' ');
+		std::replace_if(title.name.begin(), title.name.end(), std::iswcntrl, ' ');
 
 		std::cout << title.name << "(" << title.uri << ")" << std::endl;
 	}

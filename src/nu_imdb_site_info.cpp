@@ -11,6 +11,9 @@
 //-----------------------------------------------------------------------------------
 #include "nu_user_info.h"
 //-----------------------------------------------------------------------------------
+#include <cctype>
+#include <cwctype>
+
 #include "Poco/JSON/Parser.h"
 #include "Poco/JSON/Object.h"
 
@@ -68,7 +71,8 @@ imdb_site_info_t::imdb_site_info_t()
 		parser_entity_t("//div[@class='ratings_wrapper']/div/@data-titleid", "tt(\\d+)"), // id
 		"//meta[@property='og:type']/@content", //"//div[@id='siteContainer']/@itemtype", // type
 		//parser_entity_t("//meta[@property='og:title']/@content", "\\((\\d{4})\\)"), // year
-		"//meta[@itemprop='datePublished']/@content", // year
+		//"//meta[@itemprop='datePublished']/@content", // year
+		parser_entity_t("//title/text()", "\\(.*(\\d{4}).*\\)"), // year
 		"//div[@class='imdbRating']/div[@class='ratingValue']/strong/span[@itemprop='ratingValue']/text()", // average rating
 		//"//meta[@itemprop='bestRating']/@content", // best rating
 		"//span[@itemprop='bestRating']/text()", // best rating
@@ -784,7 +788,7 @@ bool imdb_site_info_t::authenticate_imdb_with_tesseract(site_user_info_t &site_u
 bool imdb_site_info_t::parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title)
 {
 	NU_PARSE(title, cover_thumb_uri, true);
-	NU_PARSE(title, cover_uri, true);
+	NU_PARSE(title, cover_uri, false);
 
 	//title.cover_texture.handle = 0;
 
@@ -795,7 +799,7 @@ bool imdb_site_info_t::parse_title_info(pugi::xml_node &node, site_user_info_t &
 		// remove line breaks:
 		//title.name.erase(std::remove_if(title.name.begin(), title.name.end(), std::iscntrl), title.name.end());
 		//replace_whitespace(title.name);
-		std::replace_if(title.name.begin(), title.name.end(), std::iscntrl, ' ');
+		std::replace_if(title.name.begin(), title.name.end(), std::iswcntrl, ' ');
 
 		std::cout << title.name << "(" << title.uri << ")" << std::endl;
 	}

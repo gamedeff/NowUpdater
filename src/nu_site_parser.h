@@ -10,9 +10,8 @@
 #ifndef NU_SITE_PARSER_H
 #define NU_SITE_PARSER_H
 //-----------------------------------------------------------------------------------
-#include <cctype>
-
 #include <regex>
+#include <cwctype>
 
 #include "nu_xml.h"
 //-----------------------------------------------------------------------------------
@@ -107,8 +106,10 @@ template <class T> bool parse_f(pugi::xml_node &node, const parser_entity_t &ent
 			return false;
  
 		const pugi::char_t *node_str = node_selected.node() ? node_selected.node().value() : node_selected.attribute().value();
+		pugi::string_t node_str_fixed = node_str;
+		std::replace_if(node_str_fixed.begin(), node_str_fixed.end(), std::iswcntrl, ' ');
 
-		return parse_f(node_str, entity, result_value, convert_f);
+		return parse_f(node_str_fixed.c_str(), entity, result_value, convert_f);
 	}
 }
 
