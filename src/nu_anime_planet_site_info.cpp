@@ -125,7 +125,8 @@ anime_planet_site_info_t::anime_planet_site_info_t()
 	cover_image_scale_x = 0.3f;
 	cover_image_scale_y = 0.3f;
 
-	color = ImVec4(0.6f, 0.6f, 0.0f, 1.0f);
+	//color = ImVec4(0.6f, 0.6f, 0.0f, 1.0f);
+	color = ImVec4(0.3f, 0.0f, 0.6f, 1.0f);
 }
 
 bool anime_planet_site_info_t::authenticate(site_user_info_t &site_user)

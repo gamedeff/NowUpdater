@@ -60,7 +60,7 @@ imdb_site_info_t::imdb_site_info_t()
 		"/html/body/div/div/ul[@class='nav']/li[@class='next']/a",
 
 		"//div[@class='list_item odd']/div[@class='info']/b//a/text()", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // name
-		"//div[contains(@class, 'list_item')]/div[@class='info']/b//a/@href", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // uri
+		"(//div[contains(@class, 'list_item')]/div[@class='info']/b|//div[contains(@class, 'lister-item-content')]/h3[@class='lister-item-header'])/a/@href", //"/html[1]/body[1]/div[2]/table[1]/tbody[1]/tr[*]/td[1]/a",  // uri
 
 		"//meta[@property='og:image']/@content",
 		"//div[@class='poster']/a/img/@src",
@@ -68,7 +68,7 @@ imdb_site_info_t::imdb_site_info_t()
 		//"//div[@class='title_wrapper']/h1[@itemprop='name']/text()", // name
 		"//h1[@itemprop='name']/text()", // name
 		//parser_entity_t("//meta[@property='og:url']/@content", "http\\:\\/\\/www\\.imdb\\.com\\/title\\/tt(\\d{7})\\/"), // id
-		parser_entity_t("//div[@class='ratings_wrapper']/div/@data-titleid", "tt(\\d+)"), // id
+		parser_entity_t("//div[@class='ratings_wrapper']/div/@data-titleid|//div/@data-tconst|//div/@data-const", "tt(\\d+)"), // id
 		"//meta[@property='og:type']/@content", //"//div[@id='siteContainer']/@itemtype", // type
 		//parser_entity_t("//meta[@property='og:title']/@content", "\\((\\d{4})\\)"), // year
 		//"//meta[@itemprop='datePublished']/@content", // year
@@ -167,7 +167,9 @@ imdb_site_info_t::imdb_site_info_t()
 	cover_image_scale_x = 0.15f;
 	cover_image_scale_y = 0.15f;
 
-	color = ImVec4(0.6f, 0.0f, 0.6f, 1.0f);
+	//color = ImVec4(0.6f, 0.0f, 0.6f, 1.0f);
+	//color = ImVec4(0xf3 / 255.0f, 0xce / 255.0f, 0x13 / 255.0f, 1.0f); // #f3ce13
+	color = ImVec4(0.6f, 0.6f, 0.0f, 1.0f);
 
 	imdb_list_t imdb_default_lists[] = 
 	{
@@ -223,77 +225,43 @@ bool imdb_site_info_t::send_request_search_title(site_user_info_t &site_user, co
 				Poco::JSON::Object::Ptr title_match_array_object = title_match_array->getObject(k); // holds { "property" : "value" }
 				if(title_match_array_object)
 				{
+					title_info_t title;
+
 					Poco::Dynamic::Var title_match_array_object_id = title_match_array_object->get("id");
-					if(!title_match_array_object_id.isEmpty())
+					if(title_match_array_object_id.isEmpty())
+						continue;
+
+					std::string imdb_title_id = title_match_array_object_id.extract<std::string>();
+
+					title.uri = "http://www.imdb.com/title/" + imdb_title_id + "/";
+
+					Poco::Dynamic::Var title_match_array_object_title = title_match_array_object->get("title");
+					if(title_match_array_object_title.isEmpty())
+						continue;
+
+					title.name = title_match_array_object_title.extract<std::string>();
+
+					Poco::Dynamic::Var title_match_array_object_title_description = title_match_array_object->get("title_description");
+					if(!title_match_array_object_title_description.isEmpty())
 					{
-						Poco::Dynamic::Var title_match_array_object_title_description = title_match_array_object->get("title_description");
-						if(!title_match_array_object_title_description.isEmpty())
-						{
-							std::string imdb_title_description = title_match_array_object_title_description.extract<std::string>();
-							if(imdb_title_description.find("video game") != std::string::npos)
-								continue;
-						}
-
-						std::string imdb_title_id = title_match_array_object_id.extract<std::string>();
-
-						title_info_t title;
-						title.uri = "http://www.imdb.com/title/" + imdb_title_id + "/";
-
-						pugi::xml_document doc;
-
-						if(!load_xhtml(doc, http->redirect_to(title.uri, login_cookie)))
-							continue; //return false;
-
-						if(parse_title_info(doc, site_user, title))
-							found_titles.push_back(title);
+						std::string imdb_title_description = title_match_array_object_title_description.extract<std::string>();
+						if(imdb_title_description.find("video game") != std::string::npos)
+							continue;
 					}
+
+					//pugi::xml_document doc;
+
+					//if(!load_xhtml(doc, http->redirect_to(title.uri, login_cookie)))
+					//	continue; //return false;
+
+					//if(parse_title_info(doc, site_user, title))
+						found_titles.push_back(title);
 				}
 			}
 		}
 	}
 
 	return !found_titles.empty();
-}
-
-std::string imdb_site_info_t::imdb_get_title_id(const std::string &title_name)
-{
-	std::string title_name_encoded_str;
-	Poco::URI::encode(title_name, "", title_name_encoded_str);
-	std::string search_uri = "http://www.imdb.com/xml/find?json=1&nr=1&tt=on&q=" + title_name_encoded_str;
-
-	std::string json_response_str = http->get(search_uri);//http->redirect_to(search_uri, login_cookie);
-	std::string json_decoded_response_str;
-	Poco::URI::decode(json_response_str, json_decoded_response_str);
-	Poco::JSON::Parser parser;
-	Poco::Dynamic::Var json_response = parser.parse(json_decoded_response_str);
-
-	// use pointers to avoid copying
-	Poco::JSON::Object::Ptr object = json_response.extract<Poco::JSON::Object::Ptr>();
-
-	std::string title_matches[] = { "title_popular", "title_exact", "title_approx" };
-
-	for(int i = 0; i < countof(title_matches); ++i)
-	{
-		// use pointers to avoid copying
-		Poco::JSON::Array::Ptr title_match_array = object->getArray(title_matches[i]);
-		if(title_match_array)
-		{
-			for(int k = 0; k < title_match_array->size(); ++k)
-			{
-				Poco::JSON::Object::Ptr title_match_array_object = title_match_array->getObject(k); // holds { "property" : "value" }
-				if(title_match_array_object)
-				{
-					Poco::Dynamic::Var title_match_array_object_id = title_match_array_object->get("id");
-					if(!title_match_array_object_id.isEmpty())
-					{
-						return title_match_array_object_id.extract<std::string>();
-					}
-				}
-			}
-		}
-	}
-
-	return "";
 }
 
 std::string imdb_site_info_t::imdb_get_auth_token(const std::string &imdb_title_id)
@@ -397,7 +365,7 @@ bool imdb_site_info_t::send_request_change_title_status(site_user_info_t &site_u
 
 bool imdb_site_info_t::send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating)
 {
-	http->domain = "www.imdb.com";
+	/*http->domain = "www.imdb.com";
 
 	std::string imdb_title_id = imdb_get_title_id(title.name);
 	//std::string imdb_title_id = imdb_get_title_id_str(title);
@@ -410,7 +378,8 @@ bool imdb_site_info_t::send_request_change_title_rating(site_user_info_t &site_u
 	std::string rate_url;
 	parse(doc, parser_entity_t("//a[contains(@href, \"vote?v=" + std::to_string(uint32_t(rating / rating_mulcoef)) + "\")]/@href"), rate_url);
 
-	return rate_url.empty() ? false : load_xhtml(doc, http->redirect_to(rate_url, login_cookie));
+	return rate_url.empty() ? false : load_xhtml(doc, http->redirect_to(rate_url, login_cookie));*/
+	return send_request_change_title_rating_imdb_ajax(site_user, title, rating);
 }
 
 // other way to do it:
@@ -691,7 +660,7 @@ bool imdb_site_info_t::send_request_add_title(site_user_info_t &site_user, const
 
 bool imdb_site_info_t::send_request_delete_title(site_user_info_t &site_user, const title_info_t &title)
 {
-	return send_request_change_title_rating_imdb_ajax(site_user, title, 0);
+	return send_request_change_title_rating(site_user, title, 0);
 }
 
 bool imdb_site_info_t::authenticate(site_user_info_t &site_user)
@@ -818,12 +787,12 @@ bool imdb_site_info_t::parse_title_info(pugi::xml_node &node, site_user_info_t &
 			break;
 		}
 
-	NU_PARSE(title, year, true);
-	NU_PARSE(title, average_rating, true);
+	NU_PARSE(title, year, false);
+	NU_PARSE(title, average_rating, false);
 
 	NU_PARSE(title, best_rating, false);
 	NU_PARSE(title, worst_rating, false);
-	NU_PARSE(title, votes_num, true);
+	NU_PARSE(title, votes_num, false);
 	NU_PARSE(title, rank, false);
 
 	title.episodes_num = 1;
@@ -896,11 +865,12 @@ bool imdb_site_info_t::sync(const std::string &username, const std::string &pass
 				if(!parse_title_and_user_title_info(site_user, node_str, title, user_title))
 					return false;
 
-				if(!send_request_get_title_rating(site_user, title, user_title.rating))
-					return false;
-
 				user_title.episodes_watched_num = title.episodes_num;
 				user_title.status = imdb_lists[i].status;
+
+				if(user_title.status == NU_TITLE_STATUS_WATCHED)
+					if(!send_request_get_title_rating(site_user, title, user_title.rating))
+						return false;
 
 				site_titles.push_back(title);
 

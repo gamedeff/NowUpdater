@@ -78,6 +78,8 @@ struct title_info_t
 
 	Poco::Timestamp last_updated;
 
+	title_info_t() : id(0), type(0), year(0), average_rating(0.0f), best_rating(0), worst_rating(0), votes_num(0), rank(0), episodes_num(0) {}
+
 	PUGI_SERIALIZATION_START
 	{
 		PUGI_SERIALIZE_ATTRIB(name);

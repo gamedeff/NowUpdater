@@ -28,7 +28,6 @@ struct imdb_site_info_t : site_info_t
 
 	std::string imdb_get_title_id_str(const title_info_t &title);
 
-	std::string imdb_get_title_id(const std::string &title_name);
 	std::string imdb_get_auth_token(const std::string &imdb_title_id);
 
 	bool send_request_get_title_rating(site_user_info_t &site_user, const title_info_t &title, float &rating);

@@ -1012,7 +1012,10 @@ void user_info_t::title_ui(int &current_title_status)
 	ImGui::BeginGroup();
 	ImGui::PushItemWidth(-1);
 
-	ImGui::TextColored(ImColor(255, 0, 0), "%s (%d)", sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].name.c_str(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].year);
+	if(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].year)
+		ImGui::TextColored(ImColor(255, 0, 0), "%s (%d)", sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].name.c_str(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].year);
+	else
+		ImGui::TextColored(ImColor(255, 0, 0), "%s", sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].name.c_str());
 	ImGui::Separator();
 	//if(user_titles[current_title_index].status != NU_TITLE_STATUS_NOT_ADDED && user_titles[current_title_index].status != NU_TITLE_STATUS_PLAN_TO_WATCH)
 	{
