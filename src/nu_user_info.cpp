@@ -706,7 +706,7 @@ int user_info_t::titlelist_ui()
 	for(uint32_t si = 0; si < site_users.size(); ++si)
 		if(site_users[si].enabled)
 		{
-			//ImGui::PushStyleColor(ImGuiCol_Text, current_site == si ? selected_color : normal_color);
+			ImGui::PushStyleColor(ImGuiCol_Text, sites[site_users[si].site_index]->text_color);
 
 			ImGui::PushStyleColor(ImGuiCol_Button, sites[site_users[si].site_index]->color);
 
@@ -719,7 +719,7 @@ int user_info_t::titlelist_ui()
 
 			ImGui::PopStyleColor();
 
-			//ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
 
 			//if(sites.size() > 1 && si < site_users.size() - 1)
 				ImGui::SameLine();
@@ -882,18 +882,25 @@ int user_info_t::titlelist_ui()
 
 			bool selected = /*current_title_index == k*/ current_site == site_user_index && current_title_index == user_title_index; // current_title_index == site_users[site_user_index].user_titles[user_title_index].index;
 			sprintf(buffer, "%s##cell%dx%d", cell_str.c_str(), i, k);
-			ImGui::PushStyleColor(ImGuiCol_Text, selected ? selected_color : normal_color);
 
-			ImVec4 color = sites[site_users[site_user_index].site_index]->color;
+			ImVec4 color      = sites[site_users[site_user_index].site_index]->color;
+			ImVec4 text_color = sites[site_users[site_user_index].site_index]->text_color;
 
 			if(selected || listItemHovered == k)
+			{
 				color = ImVec4(0.40f, 0.40f, 0.90f, 0.45f);
+				text_color = selected ? selected_color : normal_color;
+			}
 			else
 				for(uint32_t si = 0; si < site_users.size(); ++si)
 					if(si != site_user_index && site_users[si].enabled)
 						if(has_title(si, site_user_index, user_title_index))
+						{
 							color = ImLerp(color, sites[site_users[si].site_index]->color, 0.5f);
+							text_color = ImLerp(text_color, sites[site_users[si].site_index]->text_color, 0.5f);
+						}
 
+			ImGui::PushStyleColor(ImGuiCol_Text, text_color);
 			ImGui::PushStyleColor(ImGuiCol_Header, color);
 
 			if(ImGui::Selectable(buffer, true/*selected_row != k && listItemHovered != k*/))

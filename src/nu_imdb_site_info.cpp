@@ -168,8 +168,9 @@ imdb_site_info_t::imdb_site_info_t()
 	cover_image_scale_y = 0.15f;
 
 	//color = ImVec4(0.6f, 0.0f, 0.6f, 1.0f);
-	//color = ImVec4(0xf3 / 255.0f, 0xce / 255.0f, 0x13 / 255.0f, 1.0f); // #f3ce13
-	color = ImVec4(0.6f, 0.6f, 0.0f, 1.0f);
+	//color = ImVec4(0.6f, 0.6f, 0.0f, 1.0f);
+	color = ImVec4(0xf3 / 255.0f, 0xce / 255.0f, 0x13 / 255.0f, 1.0f); // #f3ce13
+	text_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	imdb_list_t imdb_default_lists[] = 
 	{
@@ -391,10 +392,11 @@ bool imdb_site_info_t::send_request_change_title_rating(site_user_info_t &site_u
 	parse(doc, parser_entity_t("//a[contains(@href, \"vote?v=" + std::to_string(uint32_t(rating / rating_mulcoef)) + "\")]/@href"), rate_url);
 
 	return rate_url.empty() ? false : load_xhtml(doc, http->redirect_to(rate_url, login_cookie));*/
+
+	// other way to do it:
 	return send_request_change_title_rating_imdb_ajax(site_user, title, rating);
 }
 
-// other way to do it:
 bool imdb_site_info_t::send_request_change_title_rating_imdb_ajax(site_user_info_t &site_user, const title_info_t &title, float rating)
 {
 //void submit_rating($rating, $tconst, $auth)
@@ -604,6 +606,8 @@ bool imdb_site_info_t::send_request_add_title_to_watchlist(site_user_info_t & si
 	for(uint32_t i = 0; i < imdb_lists.size(); ++i)
 		if(imdb_lists[i].status == NU_TITLE_STATUS_PLAN_TO_WATCH)
 			return send_request_add_title_imdb_list_ajax(site_user, title, imdb_lists[i]);
+
+	return false;
 }
 
 bool imdb_site_info_t::send_request_delete_title_from_watchlist(site_user_info_t & site_user, const title_info_t & title)
@@ -611,6 +615,8 @@ bool imdb_site_info_t::send_request_delete_title_from_watchlist(site_user_info_t
 	for(uint32_t i = 0; i < imdb_lists.size(); ++i)
 		if(imdb_lists[i].status == NU_TITLE_STATUS_PLAN_TO_WATCH)
 			return send_request_delete_title_imdb_list_ajax(site_user, title, imdb_lists[i]);
+
+	return false;
 }
 
 bool imdb_site_info_t::send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status)

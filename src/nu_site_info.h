@@ -67,6 +67,7 @@ struct title_info_t
 	float average_rating;
 	uint32_t best_rating, worst_rating, votes_num, rank;
 	uint32_t episodes_num;
+	std::vector<title_info_t *> episodes; // 
 
 	std::string studio_name, studio_uri;
 
@@ -144,10 +145,11 @@ struct site_info_t
 
 	float cover_image_scale_x, cover_image_scale_y;
 
-	ImVec4 color;
+	ImVec4 color, text_color;
 
 	http_session_t *http;
 
+	site_info_t();
 	virtual ~site_info_t();
 
 	virtual bool parse_title_info_by_id(site_user_info_t &site_user, title_info_t &title);
