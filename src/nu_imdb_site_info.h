@@ -34,8 +34,15 @@ struct imdb_site_info_t : site_info_t
 
 	bool send_request_change_title_rating_imdb_ajax(site_user_info_t &site_user, const title_info_t &title, float rating);
 
-	bool send_request_get_list_item_id_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, std::string &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key);
+	bool send_request_get_list_item_id_imdb_list_ajax_watchlist_has(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, int &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key);
+
 	bool send_request_delete_title_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list);
+
+	bool send_request_add_title_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list);
+
+	bool send_request_add_title_to_watchlist(site_user_info_t & site_user, const title_info_t & title);
+
+	bool send_request_delete_title_from_watchlist(site_user_info_t & site_user, const title_info_t & title);
 
 	bool authenticate_imdb_with_tesseract(site_user_info_t &site_user);
 

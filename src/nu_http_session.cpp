@@ -657,6 +657,7 @@ std::string http_session_t::send_request(const std::string &method, const std::s
 	//std::string url = "http://" + domain + request_url;
 	//reset(url);
 
+	uri.setHost(domain);
 	uri.resolve(request_url);
 
 	std::string path(uri.getPathAndQuery());
@@ -779,7 +780,15 @@ std::string http_session_t::go_to(const std::string &location, const std::string
 {
 	uri = URI("http://" + domain);
 
-	return redirect_to(location, cookie_name);
+	std::string domain_tmp = domain;
+
+	std::string res = redirect_to(location, cookie_name);
+
+	domain = domain_tmp;
+
+	uri = URI("http://" + domain);
+
+	return res;
 }
 
 std::string http_session_t::redirect_to(const std::string &location, const std::string &cookie_name)

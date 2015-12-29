@@ -355,12 +355,24 @@ bool imdb_site_info_t::send_request_change_title_status(site_user_info_t &site_u
 	if(!authenticate(site_user))
 		return false;
 
-	//for(std::vector<imdb_list_t>::iterator imdb_lists_it = imdb_lists.begin(); imdb_lists_it != imdb_lists.end(); ++imdb_lists_it)
-	//for(uint32_t i = 0; i < imdb_lists.size(); ++i)
-	//	if(imdb_lists[i].status == status)
-	//		send_request_add_title_imdb_list_ajax(site_user, title, imdb_list[i]);
+	if(status == NU_TITLE_STATUS_WATCHED)
+	{
+		// Remove from watchlist:
+		return send_request_delete_title_from_watchlist(site_user, title);
 
-	//return http->send_json_request(title.uri, json_request_str, login_cookie);
+		// Add to ratings:
+		//send_request_change_title_rating(site_user, title, 5);
+	}
+	else
+	{
+		// Remove from ratings:
+		send_request_delete_title(site_user, title);
+
+		 // Add to watchlist:
+		return send_request_add_title_to_watchlist(site_user, title);
+	}
+
+	return false;
 }
 
 bool imdb_site_info_t::send_request_change_title_rating(site_user_info_t &site_user, const title_info_t &title, float rating)
@@ -418,7 +430,7 @@ bool imdb_site_info_t::send_request_change_title_rating_imdb_ajax(site_user_info
 }
 
 
-bool imdb_site_info_t::send_request_get_list_item_id_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, std::string &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key)
+bool imdb_site_info_t::send_request_get_list_item_id_imdb_list_ajax_watchlist_has(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list, int &imdb_list_item_id, std::string &imdb_hidden_key_name, std::string &imdb_hidden_key)
 {
 	http->domain = "www.imdb.com";
 
@@ -448,11 +460,9 @@ bool imdb_site_info_t::send_request_get_list_item_id_imdb_list_ajax(site_user_in
 			imdb_watchlist_has = imdb_watchlist_has_object->has(imdb_title_id);
 			if(imdb_watchlist_has)
 			{
-				Poco::Dynamic::Var imdb_title_id_var = imdb_watchlist_has_object->get(imdb_title_id);
-				if(!imdb_title_id_var.isEmpty())
-				{
-					imdb_list_item_id = imdb_title_id_var.extract<std::string>();
-				}
+				Poco::JSON::Array::Ptr imdb_title_id_array = imdb_watchlist_has_object->getArray(imdb_title_id);
+				if(imdb_title_id_array->size() > 0)
+					imdb_list_item_id = imdb_title_id_array->get(0);
 			}
 		}
 		Poco::Dynamic::Var imdb_list_id_var = object->get("list_id");
@@ -502,17 +512,17 @@ bool imdb_site_info_t::send_request_delete_title_imdb_list_ajax(site_user_info_t
 
 	std::string imdb_title_id = imdb_get_title_id_str(title);
 
-	std::string imdb_list_item_id;
+	int imdb_list_item_id;
 	std::string imdb_hidden_key_name;
 	std::string imdb_hidden_key;
 
-	if(!send_request_get_list_item_id_imdb_list_ajax(site_user, title, imdb_list, imdb_list_item_id, imdb_hidden_key_name, imdb_hidden_key))
+	if(!send_request_get_list_item_id_imdb_list_ajax_watchlist_has(site_user, title, imdb_list, imdb_list_item_id, imdb_hidden_key_name, imdb_hidden_key))
 		return false;
 
 	std::vector<string_pair_t> params;
 	params.push_back(std::make_pair("action", "delete"));
 	params.push_back(std::make_pair("list_id", imdb_list.list_id));
-	params.push_back(std::make_pair("list_item_id", imdb_list_item_id));
+	params.push_back(std::make_pair("list_item_id", std::to_string(imdb_list_item_id)));
 	//params.push_back(std::make_pair("ref_tag", "legacy_title_lhs"));
 	params.push_back(std::make_pair("ref_tag", "watchlist-ribbon"));
 	params.push_back(std::make_pair("list_class", imdb_list.list_class));
@@ -536,31 +546,26 @@ bool imdb_site_info_t::send_request_delete_title_imdb_list_ajax(site_user_info_t
 	return false;
 }
 
-bool imdb_site_info_t::send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
+bool imdb_site_info_t::send_request_add_title_imdb_list_ajax(site_user_info_t &site_user, const title_info_t &title, imdb_list_t &imdb_list)
 {
-	if(!authenticate(site_user))
-		return false;
-
-	if(status == NU_TITLE_STATUS_PLAN_TO_WATCH)
-		;
-	//else
-	//	return send_request_change_title_rating_imdb(site_user, title, );
-
-
 	http->domain = "www.imdb.com";
 
 	std::string imdb_title_id = imdb_get_title_id_str(title);
 
-	std::vector<string_pair_t> params;
-	params.push_back(std::make_pair("consts[]", imdb_title_id));
-	params.push_back(std::make_pair("tracking_tag", "wlb-lite"));
-
+	int imdb_list_item_id;
 	std::string imdb_hidden_key_name;
 	std::string imdb_hidden_key;
-	std::string imdb_list_id;
-	bool imdb_watchlist_has;
 
-	std::string json_response_str = http->send_request(HTTPRequest::HTTP_POST, "/list/_ajax/watchlist_has", "http://www.imdb.com/title/" + imdb_title_id + "/reference", params, parser_info.useragent, "", "", login_cookie);
+	if(send_request_get_list_item_id_imdb_list_ajax_watchlist_has(site_user, title, imdb_list, imdb_list_item_id, imdb_hidden_key_name, imdb_hidden_key) != false)
+		return false; // already added
+
+	std::vector<string_pair_t> params;
+	params.push_back(std::make_pair("const", imdb_title_id));
+	params.push_back(std::make_pair("list_id", imdb_list.list_id));
+	params.push_back(std::make_pair("ref_tag", "legacy_title_lhs"));
+	params.push_back(std::make_pair(imdb_hidden_key_name, imdb_hidden_key));
+
+	std::string json_response_str = http->send_request(HTTPRequest::HTTP_POST, "/list/_ajax/edit", "http://www.imdb.com/title/" + imdb_title_id + "/reference", params, parser_info.useragent, "", "", login_cookie);
 
 	std::string json_decoded_response_str;
 	Poco::URI::decode(json_response_str, json_decoded_response_str);
@@ -572,90 +577,45 @@ bool imdb_site_info_t::send_request_add_title(site_user_info_t &site_user, const
 	Poco::Dynamic::Var status_var = object->get("status");
 	if(!status_var.isEmpty() && status_var.extract<int>() == 200)
 	{
-		Poco::JSON::Object::Ptr imdb_watchlist_has_object = object->getObject("has"); // holds { "property" : "value" }
-		if(imdb_watchlist_has_object)
+		Poco::Dynamic::Var position_var = object->get("position");
+		if(!position_var.isEmpty())
 		{
-			imdb_watchlist_has = imdb_watchlist_has_object->has(imdb_title_id);
+			std::string position = position_var.extract<std::string>();
 		}
-		else
-			imdb_watchlist_has = false;
-		Poco::Dynamic::Var imdb_list_id_var = object->get("list_id");
-		if(!imdb_list_id_var.isEmpty())
-		{
-			imdb_list_id = imdb_list_id_var.extract<std::string>();
-		}
-		Poco::JSON::Object::Ptr imdb_hidden_key_object = object->getObject("extra"); // holds { "property" : "value" }
-		if(imdb_hidden_key_object)
-		{
-			Poco::Dynamic::Var imdb_hidden_key_name_var = imdb_hidden_key_object->get("name");
-			if(!imdb_hidden_key_name_var.isEmpty())
-			{
-				imdb_hidden_key_name = imdb_hidden_key_name_var.extract<std::string>();
-			}
-			Poco::Dynamic::Var imdb_hidden_key_var = imdb_hidden_key_object->get("value");
-			if(!imdb_hidden_key_var.isEmpty())
-			{
-				imdb_hidden_key = imdb_hidden_key_var.extract<std::string>();
-			}
-		}
-		{
-			std::vector<string_pair_t> params;
-			params.push_back(std::make_pair("const", imdb_title_id));
-			params.push_back(std::make_pair("list_id", imdb_list_id));
-			params.push_back(std::make_pair("ref_tag", "legacy_title_lhs"));
-			params.push_back(std::make_pair(imdb_hidden_key_name, imdb_hidden_key));
-
-			std::string json_response_str = http->send_request(HTTPRequest::HTTP_POST, "/list/_ajax/edit", "http://www.imdb.com/title/" + imdb_title_id + "/reference", params, parser_info.useragent, "", "", login_cookie);
-
-			std::string json_decoded_response_str;
-			Poco::URI::decode(json_response_str, json_decoded_response_str);
-			Poco::JSON::Parser parser;
-			Poco::Dynamic::Var json_response = parser.parse(json_decoded_response_str);
-
-			// use pointers to avoid copying
-			Poco::JSON::Object::Ptr object = json_response.extract<Poco::JSON::Object::Ptr>();
-			Poco::Dynamic::Var status_var = object->get("status");
-			if(!status_var.isEmpty() && status_var.extract<int>() == 200)
-			{
-				Poco::Dynamic::Var position_var = object->get("position");
-				if(!position_var.isEmpty())
-				{
-					std::string position = position_var.extract<std::string>();
-				}
-				//Poco::Dynamic::Var _var = object->get("");
-				//if(!_var.isEmpty())
-				//{
-				//	std::string  = _var.extract<std::string>();
-				//}
-				//Poco::Dynamic::Var _var = object->get("");
-				//if(!_var.isEmpty())
-				//{
-				//	std::string  = _var.extract<std::string>();
-				//}
-				//{"status":200,"":"13","list_item_id":"848030118","i"
-				return true;
-			}
-		}
-	}
-	else
-	{
-#ifdef _DEBUG
-
-		Poco::Dynamic::Var errorMessage = object->get("errorMessage");
-		if(!errorMessage.isEmpty())
-		{
-			std::cout << "json error message: " << errorMessage.extract<std::string>() << std::endl;
-		}
-
-		Poco::Dynamic::Var errorCode = object->get("errorCode");
-		if(!errorCode.isEmpty())
-		{
-			std::cout << "json error code: " << errorCode.extract<int>() << std::endl;
-		}
-#endif
+		//Poco::Dynamic::Var _var = object->get("");
+		//if(!_var.isEmpty())
+		//{
+		//	std::string  = _var.extract<std::string>();
+		//}
+		//Poco::Dynamic::Var _var = object->get("");
+		//if(!_var.isEmpty())
+		//{
+		//	std::string  = _var.extract<std::string>();
+		//}
+		//{"status":200,"":"13","list_item_id":"848030118","i"
+		return true;
 	}
 
 	return false;
+}
+
+bool imdb_site_info_t::send_request_add_title_to_watchlist(site_user_info_t & site_user, const title_info_t & title)
+{
+	for(uint32_t i = 0; i < imdb_lists.size(); ++i)
+		if(imdb_lists[i].status == NU_TITLE_STATUS_PLAN_TO_WATCH)
+			return send_request_add_title_imdb_list_ajax(site_user, title, imdb_lists[i]);
+}
+
+bool imdb_site_info_t::send_request_delete_title_from_watchlist(site_user_info_t & site_user, const title_info_t & title)
+{
+	for(uint32_t i = 0; i < imdb_lists.size(); ++i)
+		if(imdb_lists[i].status == NU_TITLE_STATUS_PLAN_TO_WATCH)
+			return send_request_delete_title_imdb_list_ajax(site_user, title, imdb_lists[i]);
+}
+
+bool imdb_site_info_t::send_request_add_title(site_user_info_t &site_user, const title_info_t &title, uint32_t status)
+{
+	return send_request_change_title_status(site_user, title, status);
 }
 
 bool imdb_site_info_t::send_request_delete_title(site_user_info_t &site_user, const title_info_t &title)
