@@ -645,7 +645,7 @@ bool myanimelist_site_info_t::import(pugi::xml_node &xml_doc_node, site_user_inf
 		}
 	}
 
-	remove_titles(site_user, site_titles);
+	remove_titles_removed_from_other_clients(site_user, site_titles);
 
 	return true;
 }

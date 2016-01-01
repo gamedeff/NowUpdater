@@ -572,5 +572,6 @@ namespace pugi
 
 GW_DECLARE_FUNC_COMPARE_BY_(index);
 GW_DECLARE_FUNC_COMPARE_BY_(name);
+GW_DECLARE_FUNC_COMPARE_BY_(uri);
 //-----------------------------------------------------------------------------------
 #endif

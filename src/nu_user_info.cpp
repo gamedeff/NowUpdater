@@ -913,7 +913,6 @@ int user_info_t::titlelist_ui()
 			}
 
 			ImGui::PopStyleColor();
-
 			ImGui::PopStyleColor();
 
 			if(ImGui::IsItemHoveredRect())

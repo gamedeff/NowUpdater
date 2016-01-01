@@ -50,6 +50,8 @@ struct imdb_site_info_t : site_info_t
 
 	virtual bool sync(const std::string &username, const std::string &password, site_user_info_t &site_user);
 
+	bool sync_title(site_user_info_t &site_user, const std::string &title_uri, uint32_t status, std::vector<title_info_t> &site_titles, uint32_t &prev_added_titles_num);
+
 	virtual bool send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num);
 
 	virtual bool send_request_change_title_status(site_user_info_t &site_user, const title_info_t &title, uint32_t status);
@@ -63,6 +65,8 @@ struct imdb_site_info_t : site_info_t
 	virtual bool send_request_search_title(site_user_info_t &site_user, const std::string &title_name, std::vector<title_info_t> &found_titles);
 
 	virtual bool parse_title_info(pugi::xml_node &node, site_user_info_t &site_user, title_info_t &title);
+
+	//bool sync_episodes(site_user_info_t &site_user, title_info_t &title);
 };
 //-----------------------------------------------------------------------------------
 #endif

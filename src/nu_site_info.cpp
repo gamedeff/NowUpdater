@@ -156,9 +156,9 @@ bool site_info_t::send_request_delete_title(site_user_info_t &site_user, uint32_
 	return send_request_delete_title(site_user, titles[i]);
 }
 
-void site_info_t::remove_titles(site_user_info_t &site_user, std::vector<title_info_t> &site_titles)
+void site_info_t::remove_titles_removed_from_other_clients(site_user_info_t &site_user, std::vector<title_info_t> &site_titles)
 {
-	// remove titles removed not from NowUpdater (from web or other client):
+	// Remove titles removed not from NowUpdater (from web or other client):
 	for(int i = 0; i < site_user.user_titles.size(); ++i)
 	{
 		std::vector<title_info_t>::const_iterator title_it = std::find_if(site_titles.begin(), site_titles.end(), std::bind2nd(compare_by_name<title_info_t>(), titles[site_user.user_titles[i].index]));

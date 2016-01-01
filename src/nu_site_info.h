@@ -42,6 +42,24 @@ enum title_type_t
 	NU_TITLE_TYPE_MUSIC_VIDEO
 };
 
+struct title_info_t;
+
+struct episode_info_t
+{
+	uint32_t number;
+
+	Poco::Timestamp airdate;
+
+	std::string name, uri;
+
+	std::vector<uint32_t> title_indexes;
+};
+
+struct season_info_t
+{
+	std::vector<episode_info_t> episodes; 
+};
+
 struct title_image_t
 {
 	uint32_t w, h;
@@ -67,7 +85,8 @@ struct title_info_t
 	float average_rating;
 	uint32_t best_rating, worst_rating, votes_num, rank;
 	uint32_t episodes_num;
-	std::vector<title_info_t *> episodes; // 
+	uint32_t seasons_num;
+	std::vector<season_info_t> seasons;
 
 	std::string studio_name, studio_uri;
 
@@ -120,6 +139,8 @@ struct site_parser_info_t
 	parser_entity_t titlesearch_titles;
 
 	std::string useragent;
+
+	parser_entity_t title_seasons_num, titleseasonlist_title_name, titleseasonlist_title_uri;
 
 	//site_parser_info_t() {}
 };
@@ -183,7 +204,7 @@ struct site_info_t
 
 	bool send_request_delete_title(site_user_info_t &site_user, uint32_t i);
 
-	void remove_titles(site_user_info_t &site_user, std::vector<title_info_t> &site_titles);
+	void remove_titles_removed_from_other_clients(site_user_info_t &site_user, std::vector<title_info_t> &site_titles);
 
 	uint32_t remove_title(site_user_info_t &site_user, uint32_t i);
 

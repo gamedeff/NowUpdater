@@ -103,7 +103,13 @@ imdb_site_info_t::imdb_site_info_t()
 		"/html/body/div/table/tbody/tr/td[@class='epsRating']/form/span[@class='totalEps']/text()",
 
 		"//ul[@class='cardDeck pure-g cd-narrow']/li/a", //"/html/body/div/div/div/table/tbody/tr/td[@class='tableTitle']/a"
-		"Mozilla/5.0 (Windows NT 6.2; rv:37.0) Gecko/20100101 Firefox/37.0"
+		"Mozilla/5.0 (Windows NT 6.2; rv:37.0) Gecko/20100101 Firefox/37.0",
+
+		"//div[@class='seasons-and-year-nav']/div[3]/a/text()", // seasons num
+		"//div[@itemprop='episodes']/strong/a/@title", // name
+		"//div[@itemprop='episodes']/strong/a", // uri
+		//"//div[@itemprop='episodes']/meta[@itemprop='episodeNumber']/@content",
+		//"//div[@itemprop='episodes']/div[@class='airdate']/text()",
 	};
 
 	parser_info = imdb_parser_info;
@@ -167,8 +173,6 @@ imdb_site_info_t::imdb_site_info_t()
 	cover_image_scale_x = 0.15f;
 	cover_image_scale_y = 0.15f;
 
-	//color = ImVec4(0.6f, 0.0f, 0.6f, 1.0f);
-	//color = ImVec4(0.6f, 0.6f, 0.0f, 1.0f);
 	color = ImVec4(0xf3 / 255.0f, 0xce / 255.0f, 0x13 / 255.0f, 1.0f); // #f3ce13
 	text_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -348,6 +352,13 @@ bool imdb_site_info_t::send_request_get_title_rating(site_user_info_t &site_user
 
 bool imdb_site_info_t::send_request_change_title_episodes_watched_num(site_user_info_t &site_user, const title_info_t &title, uint32_t episodes_watched_num)
 {
+	//assert(episodes_watched_num <= title.episodes_num);
+	//assert(episodes_watched_num <= title.episodes.size());
+
+	//for(uint32_t i = 0; i < episodes_watched_num; ++i)
+	//{
+	//	if(title.episodes[i])
+	//}
 	return false;
 }
 
@@ -764,11 +775,123 @@ bool imdb_site_info_t::parse_title_info(pugi::xml_node &node, site_user_info_t &
 	title.episodes_num = 1;
 	NU_PARSE(title, episodes_num, false);
 
+	if(title.episodes_num > 1)
+	{
+		NU_PARSE(title, seasons_num, false);
+
+		//sync_episodes(site_user, title);
+
+		std::string imdb_title_id = imdb_get_title_id_str(title);
+
+		uint32_t episode_number = 0;
+
+		for(uint32_t i = 0; i < title.seasons_num; ++i)
+		{
+			season_info_t season;
+
+			pugi::xml_document doc;
+
+			if(!load_xhtml(doc, http->redirect_to("http://www.imdb.com/title/" + imdb_title_id + "/episodes?season=" + std::to_string(i), login_cookie)))
+				return false;
+
+			const pugi::xpath_node_set nodes = doc.select_nodes(parser_info.titleseasonlist_title_uri.xpath.c_str());
+
+			for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
+			{
+				episode_info_t episode;
+				episode.number = i;
+				episode.name = it->node().attribute("title").value();
+				episode.uri = it->node().attribute("href").value();
+
+				season.episodes.push_back(episode);
+				++episode_number;
+			}
+
+			title.seasons.push_back(season);
+		}
+
+		assert(episode_number <= title.episodes_num);
+	}
+
 	return true;
 }
 
 //#undef NU_PARSE_F
 #undef NU_PARSE
+/*
+bool imdb_site_info_t::sync_episodes(site_user_info_t &site_user, title_info_t &title)
+{
+	if(!authenticate(site_user))
+		return false;
+
+	http->domain = "www.imdb.com";
+
+	std::string imdb_title_id = imdb_get_title_id_str(title);
+
+	uint32_t episode_number = 0;
+
+	for(uint32_t i = 0; i < title.seasons_num; ++i)
+	{
+		pugi::xml_document doc;
+
+		if(!load_xhtml(doc, http->redirect_to("http://www.imdb.com/title/" + imdb_title_id + "/episodes?season=" + std::to_string(i), login_cookie)))
+			return false;
+
+		const pugi::xpath_node_set nodes = doc.select_nodes(parser_info.titleseasonlist_title_uri.xpath.c_str());
+
+		for(pugi::xpath_node_set::const_iterator it = nodes.begin(); it != nodes.end(); ++it)
+		{
+			//pugi::xml_node node = it->node();
+			const pugi::char_t *node_str = it->node() ? it->node().value() : it->attribute().value();
+
+			title_info_t episode_title; //{ node.first_child().value(), node.attribute("href").value() };
+			user_title_info_t episode_user_title = { 0 };
+
+			episode_user_title.index = titles.size();
+			episode_user_title.last_updated = Poco::Timestamp::TIMEVAL_MIN;
+
+			if(!parse_title_and_user_title_info(site_user, node_str, episode_title, episode_user_title))
+				return false;
+
+			episode_user_title.status = NU_TITLE_STATUS_PLAN_TO_WATCH;
+
+			if(episode_user_title.status == NU_TITLE_STATUS_WATCHED)
+				if(!send_request_get_title_rating(site_user, episode_title, episode_user_title.rating))
+					return false;
+
+			//site_titles.push_back(episode_title);
+
+			std::vector<title_info_t>::const_iterator title_it = std::find_if(titles.begin(), titles.end(), std::bind2nd(compare_by_name<title_info_t>(), episode_title));
+
+			if(title_it != titles.end())
+			{
+				episode_user_title.index = title_it - titles.begin();
+				titles[episode_user_title.index] = episode_title;
+			}
+			else
+			{
+				titles.push_back(episode_title);
+			}
+
+			std::vector<user_title_info_t>::iterator user_title_it = std::find_if(site_user.user_titles.begin(), site_user.user_titles.end(), std::bind2nd(compare_by_index<user_title_info_t>(), episode_user_title));
+
+			if(user_title_it != site_user.user_titles.end())
+			{
+				//user_title_it->episodes_watched_num = episode_title.episodes_num;
+			}
+			else
+			{
+				site_user.user_titles.push_back(episode_user_title);
+				//++prev_added_titles_num;
+				++episode_number;
+			}
+		}
+	}
+
+	assert(episode_number <= title.episodes_num);
+
+	return true;
+}*/
 
 bool imdb_site_info_t::sync(const std::string &username, const std::string &password, site_user_info_t &site_user)
 {
@@ -822,53 +945,98 @@ bool imdb_site_info_t::sync(const std::string &username, const std::string &pass
 				//pugi::xml_node node = it->node();
 				const pugi::char_t *node_str = it->node() ? it->node().value() : it->attribute().value();
 
-				title_info_t title; //{ node.first_child().value(), node.attribute("href").value() };
-				user_title_info_t user_title = { 0 };
-
-				user_title.index = titles.size();
-				user_title.last_updated = Poco::Timestamp::TIMEVAL_MIN;
-
-				if(!parse_title_and_user_title_info(site_user, node_str, title, user_title))
+				if(!sync_title(site_user, node_str, imdb_lists[i].status, site_titles, prev_added_titles_num))
 					return false;
-
-				user_title.episodes_watched_num = title.episodes_num;
-				user_title.status = imdb_lists[i].status;
-
-				if(user_title.status == NU_TITLE_STATUS_WATCHED)
-					if(!send_request_get_title_rating(site_user, title, user_title.rating))
-						return false;
-
-				site_titles.push_back(title);
-
-				std::vector<title_info_t>::const_iterator title_it = std::find_if(titles.begin(), titles.end(), std::bind2nd(compare_by_name<title_info_t>(), title));
-
-				if(title_it != titles.end())
-				{
-					user_title.index = title_it - titles.begin();
-					titles[user_title.index] = title;
-				}
-				else
-				{
-					titles.push_back(title);
-				}
-
-				std::vector<user_title_info_t>::iterator user_title_it = std::find_if(site_user.user_titles.begin(), site_user.user_titles.end(), std::bind2nd(compare_by_index<user_title_info_t>(), user_title));
-
-				if(user_title_it != site_user.user_titles.end())
-				{
-					user_title_it->episodes_watched_num = title.episodes_num;
-				}
-				else
-				{
-					site_user.user_titles.push_back(user_title);
-					++prev_added_titles_num;
-				}
 			}
 
 			//prev_added_titles_num = titles.size();
 		}
 
-		remove_titles(site_user, site_titles);
+		remove_titles_removed_from_other_clients(site_user, site_titles);
+	}
+
+	return true;
+}
+
+bool imdb_site_info_t::sync_title(site_user_info_t &site_user, const std::string &title_uri, uint32_t status, std::vector<title_info_t> &site_titles, uint32_t &prev_added_titles_num)
+{
+	title_info_t title; //{ node.first_child().value(), node.attribute("href").value() };
+
+	//if(fast)
+	{
+		title.uri = title_uri;
+
+		std::vector<title_info_t>::const_iterator title_it = std::find_if(titles.begin(), titles.end(), std::bind2nd(compare_by_uri<title_info_t>(), title));
+
+		if(title_it != titles.end())
+			return true;
+	}
+
+	user_title_info_t user_title = { 0 };
+
+	user_title.index = titles.size();
+	user_title.last_updated = Poco::Timestamp::TIMEVAL_MIN;
+
+	if(!parse_title_and_user_title_info(site_user, title_uri, title, user_title))
+		return false;
+
+	user_title.status = status;
+
+	if(user_title.status == NU_TITLE_STATUS_WATCHED)
+	{
+		user_title.episodes_watched_num = title.episodes_num;
+
+		if(!send_request_get_title_rating(site_user, title, user_title.rating))
+			return false;
+
+		if(!send_request_delete_title_from_watchlist(site_user, title))
+			;
+	}
+
+	uint32_t episode_number = 0;
+
+	for(uint32_t i = 0; i < title.seasons.size(); ++i)
+		for(uint32_t k = 0; k < title.seasons[i].episodes.size(); ++k)
+		{
+			if(!sync_title(site_user, title.seasons[i].episodes[k].uri, NU_TITLE_STATUS_NOT_ADDED, site_titles, prev_added_titles_num))
+				continue;
+
+			//title.seasons[i].episodes[k].title_indexes.push_back(user_title.index);
+
+			uint32_t episode_title_status = user_title.status == NU_TITLE_STATUS_WATCHED ? NU_TITLE_STATUS_WATCHED : (episode_number < user_title.episodes_watched_num ? NU_TITLE_STATUS_WATCHED : NU_TITLE_STATUS_PLAN_TO_WATCH);
+
+			const title_info_t &episode_title = titles.back();
+
+			if(!send_request_add_title(site_user, episode_title, episode_title_status))
+				;
+
+			++episode_number;
+		}
+
+	site_titles.push_back(title);
+
+	std::vector<title_info_t>::const_iterator title_it = std::find_if(titles.begin(), titles.end(), std::bind2nd(compare_by_name<title_info_t>(), title));
+
+	if(title_it != titles.end())
+	{
+		user_title.index = title_it - titles.begin();
+		titles[user_title.index] = title;
+	}
+	else
+	{
+		titles.push_back(title);
+	}
+
+	std::vector<user_title_info_t>::iterator user_title_it = std::find_if(site_user.user_titles.begin(), site_user.user_titles.end(), std::bind2nd(compare_by_index<user_title_info_t>(), user_title));
+
+	if(user_title_it != site_user.user_titles.end())
+	{
+		user_title_it->episodes_watched_num = title.episodes_num;
+	}
+	else
+	{
+		site_user.user_titles.push_back(user_title);
+		++prev_added_titles_num;
 	}
 
 	return true;

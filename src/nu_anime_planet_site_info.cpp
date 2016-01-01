@@ -286,7 +286,7 @@ bool anime_planet_site_info_t::sync(const std::string &username, const std::stri
 		//prev_added_titles_num = titles.size();
 	}
 
-	remove_titles(site_user, site_titles);
+	remove_titles_removed_from_other_clients(site_user, site_titles);
 
 	return true;
 }
