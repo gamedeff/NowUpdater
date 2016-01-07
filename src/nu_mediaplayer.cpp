@@ -10,6 +10,8 @@
 #include "anitomy/anitomy.h"
 //-----------------------------------------------------------------------------------
 #include "winwmi.h"
+#include "util.h"
+#include "nu_xml.h"
 //-----------------------------------------------------------------------------------
 #define POCO_NO_UNWINDOWS
 //-----------------------------------------------------------------------------------
@@ -27,23 +29,128 @@ string_t GetProcessCommandLine(const char_t *process_name)
 	return ExecWMIQuery<string_t, char_t>(bstr_t("SELECT CommandLine FROM Win32_Process WHERE Name = '") + bstr_t(process_name) + bstr_t("'"), L"CommandLine");
 }
 //-----------------------------------------------------------------------------------
-struct mediaplayerchar_t
+struct mediaplayer_data_t
 {
 	const char_t *mediaplayer_name;
 	const char_t *mediaplayer_title;
 	const char_t *mediaplayer_class;
 };
 //-----------------------------------------------------------------------------------
-bool is_mediaplayer_name(const mediaplayerchar_t mp, const char_t *mediaplayer)
+bool is_mediaplayer_name(const mediaplayer_data_t mp, const char_t *mediaplayer)
 {
 	return _tcscmp(mp.mediaplayer_name, mediaplayer) == 0;
 }
 //-----------------------------------------------------------------------------------
 const uint32_t MEDIAPLAYER_CHAR_T_NUM = 1;
-const mediaplayerchar_t MEDIAPLAYER_CHAR_T[MEDIAPLAYER_CHAR_T_NUM] = 
+const mediaplayer_data_t MEDIAPLAYER_CHAR_T[MEDIAPLAYER_CHAR_T_NUM] = 
 {
 	{ _T("mpc-hc.exe"), _T("Media Player Classic Home Cinema"), _T("MediaPlayerClassicW") }
 };
+//-----------------------------------------------------------------------------------
+const char_t *MEDIAPLAYER_STATES_STR[] =
+{
+	_T("Opening"),
+	_T("Buffering"),
+	_T("Playing"),
+	_T("Paused"),
+	_T("Stoped"),
+	_T("Error")
+};
+//-----------------------------------------------------------------------------------
+string_t get_mediaplayer_state_str(const char_t *mediaplayer, uint32_t n)
+{
+	string_t state_str;
+
+	HWND hMediaPlayer = get_mediaplayer_handle(mediaplayer);
+
+	HWND hMediaPlayerStatusPanel = FindWindowEx(hMediaPlayer, 0, _T("#32770"), 0);
+
+	HWND hMediaPlayerStatusPanelStatic = 0;
+
+	for(uint32_t i = 0; i < n; ++i)
+		hMediaPlayerStatusPanelStatic = FindWindowEx(hMediaPlayerStatusPanel, hMediaPlayerStatusPanelStatic, _T("Static"), 0);
+
+	int text_length = (int) SendMessageW(hMediaPlayerStatusPanelStatic, WM_GETTEXTLENGTH, 0, 0);
+	if(text_length > 0)
+	{
+		const int buffer_size = 1024;
+		wchar_t buffer[buffer_size] = L"";
+		SendMessageW(hMediaPlayerStatusPanelStatic, WM_GETTEXT, (WPARAM)buffer_size, (LPARAM)buffer);
+
+		state_str = GW_W2T(buffer);
+	}
+
+	return state_str;
+}
+//-----------------------------------------------------------------------------------
+bool time_str_to_timestamp(const string_t &time_str, Poco::Timestamp &timestamp)
+{
+	if(!time_str.empty())
+	{
+		string_t s = time_str;
+
+		std::vector<int> v;
+		v.push_back(get_int_number(GW_T2A(s.c_str())));
+
+		string_t hms_delim_str = _T(":");
+		string_t::size_type hms_delim_pos = 0;
+
+		while((hms_delim_pos = s.find_first_of(hms_delim_str)) != string_t::npos)
+		{
+			s = s.substr(hms_delim_pos + hms_delim_str.length(), s.length());
+			v.push_back(get_int_number(GW_T2A(s.c_str())));
+		}
+
+		int second = v.empty() ? 0 : v.back();
+		if(!v.empty())
+			v.pop_back();
+		int minute = v.empty() ? 0 : v.back();
+		if(!v.empty())
+			v.pop_back();
+		int hour   = v.empty() ? 0 : v.back();
+		if(!v.empty())
+			v.pop_back();
+
+		Poco::DateTime dt = Poco::DateTime(0, 1, 1, hour, minute, second);
+		timestamp = dt.timestamp();
+		return true;
+	}
+
+	return false;
+}
+//-----------------------------------------------------------------------------------
+string_t get_mediaplayer_time_str(const char_t *mediaplayer, bool current_time)
+{
+	string_t s;
+
+	string_t time_str = get_mediaplayer_state_str(mediaplayer, 2);
+	if(!time_str.empty())
+	{
+		string_t time_delim_str = _T(" / ");
+		string_t::size_type time_delim_pos = time_str.find_first_of(time_delim_str);
+
+		if(time_delim_pos != string_t::npos)
+			s = current_time ? time_str.substr(0, time_delim_pos) : time_str.substr(time_delim_pos + time_delim_str.length(), time_str.length());
+	}
+
+	return s;
+}
+//-----------------------------------------------------------------------------------
+string_t get_mediaplayer_current_time_str(const char_t *mediaplayer)
+{
+	return get_mediaplayer_time_str(mediaplayer, true);
+}
+//-----------------------------------------------------------------------------------
+string_t get_mediaplayer_total_time_str(const char_t *mediaplayer)
+{
+	return get_mediaplayer_time_str(mediaplayer, false);
+}
+//-----------------------------------------------------------------------------------
+bool is_mediaplayer_paused(const char_t *mediaplayer)
+{
+	//return get_mediaplayer_state_str(mediaplayer, 3) == MEDIAPLAYER_STATES_STR[NU_MEDIAPLAYER_STATE_PAUSED];
+	return get_mediaplayer_state_str(mediaplayer, 3).find(MEDIAPLAYER_STATES_STR[NU_MEDIAPLAYER_STATE_PAUSED]) != string_t::npos;
+}
 //-----------------------------------------------------------------------------------
 uint32_t get_mediaplayer_index(const char_t *mediaplayer)
 {

@@ -47,7 +47,7 @@ GAMEWARE_API char *_FS_narrow(const char *format, ...);
 GAMEWARE_API wchar_t *_FS_wide(const wchar_t *format, ...);
 //-----------------------------------------------------------------------------------
 GAMEWARE_API char_t *string_replace(const char_t *s, const char_t *orig, char_t *rep);
-
+//-----------------------------------------------------------------------------------
 #include <string>
 #include <vector>
 #include <sstream>
