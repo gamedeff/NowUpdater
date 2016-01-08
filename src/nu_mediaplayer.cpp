@@ -47,17 +47,7 @@ const mediaplayer_data_t MEDIAPLAYER_CHAR_T[MEDIAPLAYER_CHAR_T_NUM] =
 	{ _T("mpc-hc.exe"), _T("Media Player Classic Home Cinema"), _T("MediaPlayerClassicW") }
 };
 //-----------------------------------------------------------------------------------
-const char_t *MEDIAPLAYER_STATES_STR[] =
-{
-	_T("Opening"),
-	_T("Buffering"),
-	_T("Playing"),
-	_T("Paused"),
-	_T("Stoped"),
-	_T("Error")
-};
-//-----------------------------------------------------------------------------------
-string_t get_mediaplayer_state_str(const char_t *mediaplayer, uint32_t n)
+string_t get_mediaplayer_status_str(const char_t *mediaplayer, uint32_t n)
 {
 	string_t state_str;
 
@@ -83,7 +73,7 @@ string_t get_mediaplayer_state_str(const char_t *mediaplayer, uint32_t n)
 	return state_str;
 }
 //-----------------------------------------------------------------------------------
-bool time_str_to_timestamp(const string_t &time_str, Poco::Timestamp &timestamp)
+bool time_str_to_seconds(const string_t &time_str, uint32_t &seconds)
 {
 	if(!time_str.empty())
 	{
@@ -111,8 +101,7 @@ bool time_str_to_timestamp(const string_t &time_str, Poco::Timestamp &timestamp)
 		if(!v.empty())
 			v.pop_back();
 
-		Poco::DateTime dt = Poco::DateTime(0, 1, 1, hour, minute, second);
-		timestamp = dt.timestamp();
+		seconds = 60 * 60 * hour + 60 * minute + second;
 		return true;
 	}
 
@@ -123,7 +112,7 @@ string_t get_mediaplayer_time_str(const char_t *mediaplayer, bool current_time)
 {
 	string_t s;
 
-	string_t time_str = get_mediaplayer_state_str(mediaplayer, 2);
+	string_t time_str = get_mediaplayer_status_str(mediaplayer, 2);
 	if(!time_str.empty())
 	{
 		string_t time_delim_str = _T(" / ");
@@ -146,10 +135,24 @@ string_t get_mediaplayer_total_time_str(const char_t *mediaplayer)
 	return get_mediaplayer_time_str(mediaplayer, false);
 }
 //-----------------------------------------------------------------------------------
+string_t get_mediaplayer_state_str(const char_t *mediaplayer)
+{
+	return get_mediaplayer_status_str(mediaplayer, 3);
+}
+//-----------------------------------------------------------------------------------
+nu_mediaplayer_state get_mediaplayer_state(const char_t *mediaplayer)
+{
+	for(int state = NU_MEDIAPLAYER_STATE_OPENING; state <= NU_MEDIAPLAYER_STATE_ERROR; ++state)
+		if(get_mediaplayer_state_str(mediaplayer).find(MEDIAPLAYER_STATES_STR[state]) != string_t::npos)
+			return (nu_mediaplayer_state) state;
+
+	return NU_MEDIAPLAYER_STATE_NOT_AVAILABLE;
+}
+//-----------------------------------------------------------------------------------
 bool is_mediaplayer_paused(const char_t *mediaplayer)
 {
 	//return get_mediaplayer_state_str(mediaplayer, 3) == MEDIAPLAYER_STATES_STR[NU_MEDIAPLAYER_STATE_PAUSED];
-	return get_mediaplayer_state_str(mediaplayer, 3).find(MEDIAPLAYER_STATES_STR[NU_MEDIAPLAYER_STATE_PAUSED]) != string_t::npos;
+	return get_mediaplayer_state_str(mediaplayer).find(MEDIAPLAYER_STATES_STR[NU_MEDIAPLAYER_STATE_PAUSED]) != string_t::npos;
 }
 //-----------------------------------------------------------------------------------
 uint32_t get_mediaplayer_index(const char_t *mediaplayer)

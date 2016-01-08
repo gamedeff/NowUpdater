@@ -103,8 +103,10 @@ void user_info_t::on_timer(Poco::Timer& timer)
 	Poco::FastMutex::ScopedLock lock(mutex);
 
 	//GetProcessList();
-	for(std::vector<nu_mediaplayer>::const_iterator it = mediaplayers.begin(); it != mediaplayers.end(); ++it)
+	for(std::vector<nu_mediaplayer>::iterator it = mediaplayers.begin(); it != mediaplayers.end(); ++it)
 	{
+		it->update_state();
+
 		//string_t title_filename = it->get_title_filename();
 		string_t title_filename;
 		bool has_new_title_filename = it->get_title_filename(title_filename);
@@ -642,6 +644,13 @@ int user_info_t::main()
 	ImGui::Separator();
 
 	title_ui(current_title_status);
+
+	ImGui::Separator();
+
+	for(std::vector<nu_mediaplayer>::const_iterator it = mediaplayers.begin(); it != mediaplayers.end(); ++it)
+	{
+		ImGui::Text("%s state: %s", GW_T2A(it->name.c_str()), GW_T2A(MEDIAPLAYER_STATES_STR[it->state]));
+	}
 
 	ImGui::Separator();
 

@@ -70,6 +70,7 @@ struct site_user_info_t
 	uint32_t id;
 
 	std::vector<user_title_info_t> user_titles;
+	std::vector<uint32_t> user_titles_pending_rating;
 
 	PUGI_SERIALIZATION_START
 	{
@@ -91,6 +92,8 @@ struct site_user_info_t
 		//}
 
 		PUGI_SERIALIZE_ARRAY_NR(user_titles, "title");
+
+		//PUGI_SERIALIZE_ARRAY_NR(user_titles_pending_rating, "title_pending_rating");
 
 		return true;
 	}

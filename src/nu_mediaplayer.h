@@ -47,11 +47,11 @@ int get_title_filename_info_guessit_online(const char_t *filename, title_filenam
 HWND get_mediaplayer_handle(const char_t *mediaplayer);
 string_t get_mediaplayer_current_time_str(const char_t *mediaplayer);
 string_t get_mediaplayer_total_time_str(const char_t *mediaplayer);
-bool time_str_to_timestamp(const string_t &time_str, Poco::Timestamp &timestamp);
-bool is_mediaplayer_paused(const char_t *mediaplayer);
+bool time_str_to_seconds(const string_t &time_str, uint32_t &seconds);
 
 enum nu_mediaplayer_state
 {
+	NU_MEDIAPLAYER_STATE_NOT_AVAILABLE,
 	NU_MEDIAPLAYER_STATE_OPENING,
 	NU_MEDIAPLAYER_STATE_BUFFERING,
 	NU_MEDIAPLAYER_STATE_PLAYING,
@@ -60,15 +60,32 @@ enum nu_mediaplayer_state
 	NU_MEDIAPLAYER_STATE_ERROR
 };
 
+static const char_t *MEDIAPLAYER_STATES_STR[] =
+{
+	_T("N/A"),
+	_T("Opening"),
+	_T("Buffering"),
+	_T("Playing"),
+	_T("Paused"),
+	_T("Stopped"),
+	_T("Error")
+};
+
+string_t get_mediaplayer_state_str(const char_t *mediaplayer);
+nu_mediaplayer_state get_mediaplayer_state(const char_t *mediaplayer);
+bool is_mediaplayer_paused(const char_t *mediaplayer);
+
 struct nu_mediaplayer
 {
 	string_t name;
+
+	nu_mediaplayer_state state;
 
 	std::vector<get_title_filename_proc> get_title_filename_p;
 	std::vector<get_title_filename_cleanup_proc> get_title_filename_cleanup_p;
 	get_title_filename_info_proc get_title_filename_info_p;
 
-	nu_mediaplayer(const char_t *mediaplayer) : name(mediaplayer)
+	nu_mediaplayer(const char_t *mediaplayer) : name(mediaplayer), state(NU_MEDIAPLAYER_STATE_NOT_AVAILABLE)
 	{
 		get_title_filename_p.push_back(get_title_filename_from_cmdline);
 		get_title_filename_p.push_back(get_title_filename_from_WM_COPYDATA);
@@ -92,16 +109,13 @@ struct nu_mediaplayer
 		return get_mediaplayer_handle(name.c_str());
 	}
 
+	void update_state()
+	{
+		state = get_mediaplayer_state(name.c_str());
+	}
+
 	bool get_title_filename(string_t &title_filename_str) const
 	{
-		//is_mediaplayer_paused(name.c_str());
-		//string_t s = get_mediaplayer_current_time_str(name.c_str());
-
-		//Poco::Timestamp timestamp;
-		//if(time_str_to_timestamp(s, timestamp))
-		//{
-		//	;
-		//}
 		char_t title_filename_buffer[MAX_PATH];
 		for(std::vector<get_title_filename_proc>::const_iterator it = get_title_filename_p.begin(); it != get_title_filename_p.end(); ++it)
 			if((*it)(name.c_str(), title_filename_buffer, countof(title_filename_buffer)) != 0)
