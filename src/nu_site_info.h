@@ -60,15 +60,6 @@ struct season_info_t
 	std::vector<episode_info_t> episodes; 
 };
 
-struct title_image_t
-{
-	uint32_t w, h;
-
-	void *handle;
-
-	title_image_t() : handle(0) {}
-};
-
 struct title_info_t
 {
 	std::string name, uri;
@@ -77,7 +68,7 @@ struct title_info_t
 
 	std::string cover_texture_data;
 
-	title_image_t cover_texture;
+	image_t cover_texture;
 
 	uint32_t id;
 	uint32_t type;

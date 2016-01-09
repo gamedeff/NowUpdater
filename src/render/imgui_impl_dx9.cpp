@@ -27,7 +27,7 @@
 static HWND                     g_hWnd = 0;
 static INT64                    g_Time = 0;
 static INT64                    g_TicksPerSecond = 0;
-static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
+static LPDIRECT3DDEVICE9        g_d3d_device = NULL;
 static LPDIRECT3DVERTEXBUFFER9  g_pVB = NULL;
 static int                      VERTEX_BUFFER_SIZE = 30000;     // TODO: Make vertex buffer smaller and grow dynamically as needed.
 
@@ -71,21 +71,21 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
         }
     }
     g_pVB->Unlock();
-    g_pd3dDevice->SetStreamSource( 0, g_pVB, 0, sizeof( CUSTOMVERTEX ) );
-    g_pd3dDevice->SetFVF( D3DFVF_CUSTOMVERTEX );
+    g_d3d_device->SetStreamSource( 0, g_pVB, 0, sizeof( CUSTOMVERTEX ) );
+    g_d3d_device->SetFVF( D3DFVF_CUSTOMVERTEX );
 
     // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing
-    g_pd3dDevice->SetPixelShader( NULL );
-    g_pd3dDevice->SetVertexShader( NULL );
-    g_pd3dDevice->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
-    g_pd3dDevice->SetRenderState( D3DRS_LIGHTING, false );
-    g_pd3dDevice->SetRenderState( D3DRS_ZENABLE, false );
-    g_pd3dDevice->SetRenderState( D3DRS_ALPHABLENDENABLE, true );
-    g_pd3dDevice->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD );
-    g_pd3dDevice->SetRenderState( D3DRS_ALPHATESTENABLE, false );
-    g_pd3dDevice->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
-    g_pd3dDevice->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
-    g_pd3dDevice->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
+    g_d3d_device->SetPixelShader( NULL );
+    g_d3d_device->SetVertexShader( NULL );
+    g_d3d_device->SetRenderState( D3DRS_CULLMODE, D3DCULL_NONE );
+    g_d3d_device->SetRenderState( D3DRS_LIGHTING, false );
+    g_d3d_device->SetRenderState( D3DRS_ZENABLE, false );
+    g_d3d_device->SetRenderState( D3DRS_ALPHABLENDENABLE, true );
+    g_d3d_device->SetRenderState( D3DRS_BLENDOP, D3DBLENDOP_ADD );
+    g_d3d_device->SetRenderState( D3DRS_ALPHATESTENABLE, false );
+    g_d3d_device->SetRenderState( D3DRS_SRCBLEND, D3DBLEND_SRCALPHA );
+    g_d3d_device->SetRenderState( D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA );
+    g_d3d_device->SetRenderState( D3DRS_SCISSORTESTENABLE, true );
     //g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_SELECTARG1 );
     //g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_DIFFUSE );
     //g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
@@ -102,23 +102,23 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
 
 	//g_pd3dDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
 
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_ADD );
-	g_pd3dDevice->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_DIFFUSE );
-	g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
-    g_pd3dDevice->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
+    g_d3d_device->SetTextureStageState( 0, D3DTSS_COLOROP, D3DTOP_ADD );
+	g_d3d_device->SetTextureStageState( 0, D3DTSS_COLORARG1, D3DTA_DIFFUSE );
+	g_d3d_device->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_TEXTURE);
+    g_d3d_device->SetTextureStageState( 0, D3DTSS_ALPHAOP, D3DTOP_MODULATE );
+    g_d3d_device->SetTextureStageState( 0, D3DTSS_ALPHAARG1, D3DTA_TEXTURE );
+    g_d3d_device->SetTextureStageState( 0, D3DTSS_ALPHAARG2, D3DTA_DIFFUSE );
 
-    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
-    g_pd3dDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
+    g_d3d_device->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_LINEAR );
+    g_d3d_device->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR );
 
     // Setup orthographic projection matrix
     D3DXMATRIXA16 mat;
     D3DXMatrixIdentity(&mat);
-    g_pd3dDevice->SetTransform(D3DTS_WORLD, &mat);
-    g_pd3dDevice->SetTransform(D3DTS_VIEW, &mat);
+    g_d3d_device->SetTransform(D3DTS_WORLD, &mat);
+    g_d3d_device->SetTransform(D3DTS_VIEW, &mat);
     D3DXMatrixOrthoOffCenterLH(&mat, 0.5f, ImGui::GetIO().DisplaySize.x+0.5f, ImGui::GetIO().DisplaySize.y+0.5f, 0.5f, -1.0f, +1.0f);
-    g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &mat);
+    g_d3d_device->SetTransform(D3DTS_PROJECTION, &mat);
 
     // Render command lists
     int vtx_offset = 0;
@@ -135,9 +135,9 @@ static void ImGui_ImplDX9_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_
             else
             {
                 const RECT r = { (LONG)pcmd->clip_rect.x, (LONG)pcmd->clip_rect.y, (LONG)pcmd->clip_rect.z, (LONG)pcmd->clip_rect.w };
-                g_pd3dDevice->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->texture_id );
-                g_pd3dDevice->SetScissorRect(&r);
-                g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
+                g_d3d_device->SetTexture( 0, (LPDIRECT3DTEXTURE9)pcmd->texture_id );
+                g_d3d_device->SetScissorRect(&r);
+                g_d3d_device->DrawPrimitive(D3DPT_TRIANGLELIST, vtx_offset, pcmd->vtx_count/3);
             }
             vtx_offset += pcmd->vtx_count;
         }
@@ -188,7 +188,7 @@ LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lPara
 bool ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
 {
     g_hWnd = (HWND)hwnd;
-    g_pd3dDevice = device;
+    g_d3d_device = device;
 
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond)) 
         return false;
@@ -224,7 +224,7 @@ void ImGui_ImplDX9_Shutdown()
 {
     ImGui_ImplDX9_InvalidateDeviceObjects();
     ImGui::Shutdown();
-    g_pd3dDevice = NULL;
+    g_d3d_device = NULL;
     g_hWnd = 0;
 }
 
@@ -240,7 +240,7 @@ static void ImGui_ImplDX9_CreateFontsTexture()
 
     // Create DX9 texture
     LPDIRECT3DTEXTURE9 pTexture = NULL;
-    if (D3DXCreateTexture(g_pd3dDevice, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
+    if (D3DXCreateTexture(g_d3d_device, width, height, 1, D3DUSAGE_DYNAMIC, D3DFMT_A8, D3DPOOL_DEFAULT, &pTexture) < 0)
     {
         IM_ASSERT(0);
         return;
@@ -261,10 +261,10 @@ static void ImGui_ImplDX9_CreateFontsTexture()
 
 bool ImGui_ImplDX9_CreateDeviceObjects()
 {
-    if (!g_pd3dDevice)
+    if (!g_d3d_device)
         return false;
 
-    if (g_pd3dDevice->CreateVertexBuffer(VERTEX_BUFFER_SIZE * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
+    if (g_d3d_device->CreateVertexBuffer(VERTEX_BUFFER_SIZE * sizeof(CUSTOMVERTEX), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFVF_CUSTOMVERTEX, D3DPOOL_DEFAULT, &g_pVB, NULL) < 0)
         return false;
 
     ImGui_ImplDX9_CreateFontsTexture();
@@ -273,7 +273,7 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
 
 void ImGui_ImplDX9_InvalidateDeviceObjects()
 {
-    if (!g_pd3dDevice)
+    if (!g_d3d_device)
         return;
     if (g_pVB)
     {
@@ -317,3 +317,4 @@ void ImGui_ImplDX9_NewFrame()
     // Start the frame
     ImGui::NewFrame();
 }
+

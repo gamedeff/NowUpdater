@@ -32,7 +32,7 @@
 
 #pragma comment(lib, "imgui" IMGUI_LIB_SUFFIX)
 
-bool ImplDX9_LoadImage(const void *data, uint32_t data_size, title_image_t &image);
+#include "render.h"
 
 std::string get_data_path(options_t *options, const std::string &dataname, bool createdirs = false)
 {
@@ -997,7 +997,7 @@ void user_info_t::title_ui(int &current_title_status)
 
 		if(!sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.empty() && !sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture.handle)
 		{
-			ImplDX9_LoadImage(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.c_str(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.size(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture);
+			g_render->LoadImage(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.c_str(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.size(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture);
 		}
 	}
 

@@ -40,6 +40,8 @@ struct user_title_info_t
 
 	Poco::Timestamp last_updated;
 
+	uint32_t current_timepos; // in seconds
+
 	//user_title_info_t() : last_updated(Poco::Timestamp::TIMEVAL_MIN) {}
 
 	PUGI_SERIALIZATION_START

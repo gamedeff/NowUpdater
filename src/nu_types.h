@@ -46,6 +46,15 @@ public:
 	noncopyable() {}
 };
 //-----------------------------------------------------------------------------------
+struct image_t
+{
+	uint32_t w, h;
+
+	void *handle;
+
+	image_t() : handle(0) {}
+};
+//-----------------------------------------------------------------------------------
 #ifndef WINVER				// Allow use of features specific to Windows XP or later.
 #define WINVER 0x0600		// Change this to the appropriate value to target other versions of Windows.
 #endif

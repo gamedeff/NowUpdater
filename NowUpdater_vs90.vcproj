@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions=""
 				Optimization="0"
-				AdditionalIncludeDirectories=".\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
+				AdditionalIncludeDirectories=".\src;.\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WINVER=0x0500;"
 				StringPooling="true"
 				MinimalRebuild="true"
@@ -133,7 +133,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
-				AdditionalIncludeDirectories=".\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
+				AdditionalIncludeDirectories=".\src;.\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WINVER=0x0500;"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -218,7 +218,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions=""
 				Optimization="4"
-				AdditionalIncludeDirectories=".\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
+				AdditionalIncludeDirectories=".\src;.\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WINVER=0x0600;POCO_STATIC"
 				StringPooling="true"
 				MinimalRebuild="true"
@@ -309,7 +309,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
-				AdditionalIncludeDirectories=".\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
+				AdditionalIncludeDirectories=".\src;.\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WINVER=0x0500;POCO_STATIC;"
 				StringPooling="true"
 				RuntimeLibrary="0"
@@ -394,7 +394,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions=""
 				Optimization="4"
-				AdditionalIncludeDirectories=".\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
+				AdditionalIncludeDirectories=".\src;.\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WINVER=0x0500;POCO_STATIC;"
 				StringPooling="true"
 				MinimalRebuild="true"
@@ -485,7 +485,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
-				AdditionalIncludeDirectories=".\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
+				AdditionalIncludeDirectories=".\src;.\src\platform\win;.\src\render;.\include;libs\poco\Foundation\include;libs\poco\XML\include;libs\poco\Util\include;libs\poco\Net\include;libs\poco\NetSSL_Win\include;libs\poco\JSON\include;libs\pugixml\src;libs\tidy\include;libs\imgui;libs\imgui\examples\directx9_example;libs\anitomy"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WINVER=0x0500;POCO_STATIC;"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -596,6 +596,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\render\render_d3d9.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\util.cpp"
 				>
 			</File>
@@ -697,6 +701,14 @@
 			</File>
 			<File
 				RelativePath=".\src\nu_xml.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\render\render.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\render\render_d3d9.h"
 				>
 			</File>
 			<File
