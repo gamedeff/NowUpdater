@@ -568,6 +568,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\nu_app.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\src\nu_http_session.cpp"
 				>
 			</File>
@@ -653,6 +657,10 @@
 			</File>
 			<File
 				RelativePath=".\src\nu_anime_planet_site_info.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\nu_app.h"
 				>
 			</File>
 			<File
