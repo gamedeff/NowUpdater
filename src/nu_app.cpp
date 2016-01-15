@@ -82,6 +82,14 @@ void nu_app::destroy()
 {
 	userinfo.save();
 
+	if(renderer)
+	{
+		renderer->Destroy();
+
+		delete renderer;
+		renderer = 0;
+	}
+
 	FOR_EACH(WindowByHandle &window_by_handle, windows)
 	{
 		HWND hWnd = window_by_handle.first;
@@ -92,6 +100,8 @@ void nu_app::destroy()
 
 		destroy_window(hWnd);
 	}
+
+	windows.clear();
 }
 
 WNDCLASSEX nu_app::register_window_class(const char_t *wndclass)
@@ -260,10 +270,7 @@ void nu_app::handle_messages(uint32_t popup_w, uint32_t popup_h)
 
 				// Rendering
 				renderer->RenderFrame(window.render_view);
-				//renderer->Present();
 			}
-			//if(window.render_view)
-			//	window.render_view->Present();
 		}
 	}
 

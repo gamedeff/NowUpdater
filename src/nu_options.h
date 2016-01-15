@@ -26,7 +26,17 @@ struct options_t
 
 	std::string app_name, data_dir, xml_ext;
 
-	options_t() : no_native_windows(false), animate_popup(false), popup_delay(3000), min_rating(1), max_rating(10), mediaplayer_check_delay(5000), x(100), y(100), data_dir("data"), xml_ext(".xml") {}
+	options_t() : no_native_windows(false),
+				  animate_popup(false),
+				  popup_delay(3000),
+				  min_rating(1),
+				  max_rating(10),
+				  mediaplayer_check_delay(5000),
+				  x(100),
+				  y(100),
+				  data_dir("data"),
+				  xml_ext(".xml")
+	{}
 };
 //-----------------------------------------------------------------------------------
 #endif

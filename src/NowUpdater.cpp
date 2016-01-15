@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 
 	uint32_t popup_w = 400, popup_h = 300;
 
-	uint32_t x = app->options.x, y = app->options.y, w = 800, h = 600;
+	uint32_t w = 800, h = 600;
 
 	uint32_t n = 1;
 
@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 
 		string_t window_title = app->options.no_native_windows ? NU_APP_TITLE : GW_A2T(app->userinfo.username + "'s list ") + string_t(GW_A2T(std::to_string(i)));
 
-		HWND hWnd = app->create_window(window_title, x, y, w, h);
+		HWND hWnd = app->create_window(window_title, app->options.x, app->options.y, w, h);
 	//}
 
 	//app->renderer->Reset(w, h);
