@@ -9,6 +9,9 @@
 //===================================================================================
 #include "nu_app.h"
 //-----------------------------------------------------------------------------------
+#include <Shlwapi.h>
+#pragma comment(lib, "Shlwapi.lib")
+//-----------------------------------------------------------------------------------
 using Poco::Timer;
 using Poco::TimerCallback;
 
@@ -31,7 +34,40 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 //-----------------------------------------------------------------------------------
 nu_app::nu_app(const std::string &username, const std::string &password) : userinfo(username, password, &options), renderer(0)
 {
-	options.app_name = "NowUpdater";
+	options.app_name = GW_T2A(get_process_name());
+
+#ifdef GW_DEBUG
+	options.app_name = options.app_name.substr(0, options.app_name.size() - 1); // remove "d" ending in debug builds
+#endif
+}
+
+string_t nu_app::get_process_name()
+{
+	string_t buffer;
+	buffer.resize(MAX_PATH);
+	do
+	{
+		uint32_t len = GetModuleFileName(NULL, &buffer[0], buffer.size());
+		if(len < buffer.size())
+		{
+			buffer.resize(len);
+			break;
+		}
+
+		buffer.resize(buffer.size() * 2);
+	}
+	while(buffer.size() < USHRT_MAX + 1);
+	// now buffer = "c:\whatever\yourexecutable.exe"
+
+	// Go to the beginning of the file name
+	char_t *process_name = PathFindFileName(buffer.c_str());
+	// now process_name = "yourexecutable.exe"
+
+	// Set the dot before the extension to 0 (terminate the string there)
+	*(PathFindExtension(process_name)) = 0;
+	// now process_name = "yourexecutable"
+
+	return string_t(process_name);
 }
 
 bool nu_app::init()

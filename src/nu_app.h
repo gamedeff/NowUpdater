@@ -43,6 +43,8 @@ struct nu_app
 
 	nu_app(const std::string &username, const std::string &password);
 
+	string_t get_process_name();
+
 	bool init();
 
 	void destroy();
