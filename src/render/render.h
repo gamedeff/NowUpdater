@@ -12,6 +12,7 @@
 //-----------------------------------------------------------------------------------
 #include "nu_types.h"
 #include "image.h"
+#include "for_each.h"
 //-----------------------------------------------------------------------------------
 class Texture
 {
@@ -30,12 +31,35 @@ public:
 	BitmapImage image;
 };
 //-----------------------------------------------------------------------------------
+class Render;
+//-----------------------------------------------------------------------------------
+class RenderView
+{
+public:
+
+	RenderView(Render *renderer) {}
+
+	virtual ~RenderView() {}
+
+	virtual bool Init(uint32_t i, HWND hWnd, uint32_t Width = 0, uint32_t Height = 0) = 0;
+	virtual void Destroy() = 0;
+
+	virtual bool BeginRender() = 0;
+	virtual bool EndRender() = 0;
+
+	virtual bool Present() = 0;
+
+	virtual bool Reset(uint32_t i, uint32_t Width, uint32_t Height) = 0;
+};
+//-----------------------------------------------------------------------------------
 class Render
 {
 public:
 
 	Texture render_target;
 	bool use_render_target;
+
+	std::vector<RenderView *> render_views;
 
 	Render(bool use_render_target) : use_render_target(use_render_target)
 	{
@@ -46,7 +70,18 @@ public:
 
 	virtual bool Init() = 0;
 	virtual bool InitDevice(HWND hWnd) = 0;
-	virtual void Destroy() = 0;
+	virtual void Destroy()
+	{
+		FOR_EACH(RenderView *render_view, render_views)
+		{
+			render_view->Destroy();
+			delete render_view;
+		}
+
+		render_views.clear();
+	}
+
+	virtual RenderView *CreateRenderView(HWND hWnd, uint32_t Width = 0, uint32_t Height = 0) = 0;
 
 	virtual bool CreateRenderTarget(uint32_t Width, uint32_t Height, uint16_t BytesPerPixel) = 0;
 
@@ -55,13 +90,17 @@ public:
 	virtual bool BeginRender() = 0;
 	virtual bool EndRender() = 0;
 
+	virtual bool Present() = 0;
+
+	virtual bool Reset(uint32_t Width, uint32_t Height) = 0;
+
 	virtual void NewFrame() = 0;
-	virtual void RenderFrame() = 0;
+	virtual void RenderFrame(RenderView *render_view) = 0;
 
 	virtual LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
 };
 //-----------------------------------------------------------------------------------
-static Render *g_render = 0;
+//static Render *g_render = 0;
 //-----------------------------------------------------------------------------------
 #endif
 

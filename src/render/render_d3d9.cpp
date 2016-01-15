@@ -39,7 +39,7 @@ bool RenderD3D9::InitDevice(HWND hWnd)
 	d3d_pp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 
 	// Create the D3DDevice
-	if(d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &d3d_pp, &d3d_device) < 0)
+	if(d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_SOFTWARE_VERTEXPROCESSING/*D3DCREATE_HARDWARE_VERTEXPROCESSING*/, &d3d_pp, &d3d_device) < 0)
 	{
 		d3d->Release();
 		return false;
@@ -65,6 +65,7 @@ bool RenderD3D9::InitDevice(HWND hWnd)
 
 void RenderD3D9::Destroy()
 {
+	//ImGui_ImplDX9_Set(hWnd, d3d_device);
 	ImGui_ImplDX9_Shutdown();
 
 	if(render_target_d3d9.handle)
@@ -75,8 +76,48 @@ void RenderD3D9::Destroy()
 		SAFE_RELEASE(render_target_d3d9.handle);
 	}
 
+	Render::Destroy();
+
+	for(uint32_t i = 0; i < render_views.size(); ++i)
+		render_views[i]->Destroy();
+
+	for(uint32_t i = 0; i < render_views.size(); ++i)
+		delete render_views[i];
+
+	render_views.clear();
+
 	SAFE_RELEASE(d3d_device);
 	SAFE_RELEASE(d3d);
+}
+
+bool RenderD3D9::Reset(uint32_t Width, uint32_t Height)
+{
+	for(uint32_t i = 0; i < render_views.size(); ++i)
+		render_views[i]->Destroy();
+
+	d3d_pp.BackBufferWidth = Width;
+	d3d_pp.BackBufferHeight = Height;
+
+	HRESULT hr = d3d_device->Reset(&d3d_pp);
+	if(hr == D3DERR_INVALIDCALL)
+		return false;//IM_ASSERT(0);
+
+	for(uint32_t i = 0; i < render_views.size(); ++i)
+		if(!render_views[i]->Reset(i, Width, Height))
+			return false;
+
+	return true;
+}
+
+RenderView *RenderD3D9::CreateRenderView(HWND hWnd, uint32_t Width, uint32_t Height)
+{
+	RenderViewD3D9 *render_view = new RenderViewD3D9(this);
+
+	if(!render_view->Init(render_views.size(), hWnd, Width, Height))
+		return 0;
+
+	render_views.push_back(render_view);
+	return render_views.back();
 }
 
 bool RenderD3D9::CreateRenderTarget(uint32_t Width, uint32_t Height, uint16_t BytesPerPixel)
@@ -189,10 +230,15 @@ bool RenderD3D9::EndRender()
 	{
 		GW_D3D9_CHECK(d3d_device->EndScene(),
 						_T("IDirect3DDevice9::EndScene() failed - Begin() called twice?.."));
-
-		GW_D3D9_CHECK_NO_DEBUG_BREAK(d3d_device->Present(NULL, NULL, NULL, NULL),
-										_T("IDirect3DDevice9::Present() failed."));
 	}
+
+	return true;
+}
+
+bool RenderD3D9::Present()
+{
+	GW_D3D9_CHECK_NO_DEBUG_BREAK(d3d_device->Present(NULL, NULL, NULL, NULL),
+									_T("IDirect3DDevice9::Present() failed."));
 
 	return true;
 }
@@ -206,14 +252,14 @@ LRESULT WINAPI RenderD3D9::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 	switch(msg)
 	{
 		case WM_SIZE:
+
 			if(d3d_device != NULL && wParam != SIZE_MINIMIZED)
 			{
+				ImGui_ImplDX9_Set(hWnd, d3d_device);
 				ImGui_ImplDX9_InvalidateDeviceObjects();
-				d3d_pp.BackBufferWidth  = LOWORD(lParam);
-				d3d_pp.BackBufferHeight = HIWORD(lParam);
-				HRESULT hr = d3d_device->Reset(&d3d_pp);
-				if (hr == D3DERR_INVALIDCALL)
-					IM_ASSERT(0);
+
+				Reset(LOWORD(lParam), HIWORD(lParam));
+
 				ImGui_ImplDX9_CreateDeviceObjects();
 			}
 			return 0;
@@ -263,10 +309,9 @@ LRESULT WINAPI RenderD3D9::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 				//window->OnPaint(window);
 				//if(userinfo.show_title_popup)
 				{
-					ImGui_ImplDX9_NewFrame();
-					BeginRender();
-					ImGui::Render();
-					EndRender();
+/*					NewFrame();
+					RenderFrame();
+					//window.render_view->Present();*/
 				}
 
 				if(use_render_target && render_target_d3d9.render_to_surface) //if(render_target_d3d9.surface_sysmem) //if(window->render && window->render->render_target)
@@ -349,21 +394,99 @@ LRESULT WINAPI RenderD3D9::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 			PostQuitMessage(0);
 			return 0;
 	}
+
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
 void RenderD3D9::NewFrame()
 {
+	//ImGui_ImplDX9_Set(hWnd, d3d_device);
 	ImGui_ImplDX9_NewFrame();
 }
 
-void RenderD3D9::RenderFrame()
+void RenderD3D9::RenderFrame(RenderView *render_view)
 {
-	BeginRender();
+	render_view ? render_view->BeginRender() : BeginRender();
 	{
+		//ImGui_ImplDX9_Set(hWnd, d3d_device);
+
 		ImGui::Render();
 	}
-	EndRender();
+	render_view ? render_view->EndRender() : EndRender();
+
+	render_view ? render_view->Present() : Present();
 }
 //-----------------------------------------------------------------------------------
+RenderViewD3D9::RenderViewD3D9(RenderD3D9 *renderer) : RenderView(renderer), renderer(renderer), d3d_swap_chain(0), d3d_swap_chain_back_buffer(0)
+{
+}
 
+bool RenderViewD3D9::Init(uint32_t i, HWND hWnd, uint32_t Width, uint32_t Height)
+{
+	ZeroMemory(&d3d_pp, sizeof(d3d_pp));
+	d3d_pp.hDeviceWindow = hWnd;
+	d3d_pp.Windowed = TRUE;
+	d3d_pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+	d3d_pp.BackBufferFormat = D3DFMT_X8R8G8B8; //D3DFMT_UNKNOWN;
+	d3d_pp.BackBufferWidth = Width;
+	d3d_pp.BackBufferHeight = Height;
+	d3d_pp.EnableAutoDepthStencil = TRUE;
+	d3d_pp.AutoDepthStencilFormat = D3DFMT_D16;
+	d3d_pp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+
+	if(i > 0)
+	{
+		GW_D3D9_CHECK(renderer->d3d_device->CreateAdditionalSwapChain(&d3d_pp, &d3d_swap_chain), _T("Failed to CreateAdditionalSwapChain"));
+	}
+	else
+	{
+		GW_D3D9_CHECK(renderer->d3d_device->GetSwapChain(0, &d3d_swap_chain), _T("Failed to GetSwapChain"));
+	}
+
+	return true;
+}
+
+void RenderViewD3D9::Destroy()
+{
+	SAFE_RELEASE(d3d_swap_chain_back_buffer);
+	SAFE_RELEASE(d3d_swap_chain);
+}
+
+bool RenderViewD3D9::BeginRender()
+{
+	// Tell the Direct3D device to render to the swap chain’s back buffer
+	GW_D3D9_CHECK(d3d_swap_chain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &d3d_swap_chain_back_buffer),
+								_T("IDirect3DSwapChain9::GetBackBuffer() failed."));
+	GW_D3D9_CHECK(renderer->d3d_device->SetRenderTarget(0, d3d_swap_chain_back_buffer),
+								_T("IDirect3DDevice9::SetRenderTarget() failed."));
+
+	D3DCOLOR clrBlack = D3DCOLOR_ARGB(0xFF, 0x00, 0x00, 0x00);
+
+	// Clear the target buffer...
+	GW_D3D9_CHECK(renderer->d3d_device->Clear( 0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER,
+		clrBlack, 1.0f, 0 ),
+		_T("IDirect3DDevice9::Clear() failed."));
+
+	return renderer->BeginRender();
+}
+
+bool RenderViewD3D9::EndRender()
+{
+	return renderer->EndRender();
+}
+
+bool RenderViewD3D9::Present()
+{
+	GW_D3D9_CHECK_NO_DEBUG_BREAK(d3d_swap_chain->Present(NULL, NULL, d3d_pp.hDeviceWindow, NULL, 0),
+						_T("IDirect3DSwapChain9::Present() failed."));
+
+	SAFE_RELEASE(d3d_swap_chain_back_buffer);
+
+	return true;
+}
+
+bool RenderViewD3D9::Reset(uint32_t i, uint32_t Width, uint32_t Height)
+{
+	return Init(i, d3d_pp.hDeviceWindow, Width, Height);
+}
+//-----------------------------------------------------------------------------------

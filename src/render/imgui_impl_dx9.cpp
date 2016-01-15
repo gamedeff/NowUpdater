@@ -185,10 +185,15 @@ LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lPara
     return 0;
 }
 
+void ImGui_ImplDX9_Set(void* hwnd, IDirect3DDevice9* device)
+{
+	g_hWnd = (HWND)hwnd;
+	g_d3d_device = device;
+}
+
 bool ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
 {
-    g_hWnd = (HWND)hwnd;
-    g_d3d_device = device;
+    ImGui_ImplDX9_Set(hwnd, device);
 
     if (!QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond)) 
         return false;

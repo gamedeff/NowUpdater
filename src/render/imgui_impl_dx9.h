@@ -3,6 +3,8 @@
 
 struct IDirect3DDevice9;
 
+
+void ImGui_ImplDX9_Set(void* hwnd, IDirect3DDevice9* device);
 bool        ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device);
 void        ImGui_ImplDX9_Shutdown();
 void        ImGui_ImplDX9_NewFrame();
