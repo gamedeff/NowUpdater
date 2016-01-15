@@ -78,22 +78,18 @@ void RenderD3D9::Destroy()
 
 	Render::Destroy();
 
-	for(uint32_t i = 0; i < render_views.size(); ++i)
-		render_views[i]->Destroy();
-
-	for(uint32_t i = 0; i < render_views.size(); ++i)
-		delete render_views[i];
-
-	render_views.clear();
-
 	SAFE_RELEASE(d3d_device);
 	SAFE_RELEASE(d3d);
 }
 
 bool RenderD3D9::Reset(uint32_t Width, uint32_t Height)
 {
-	for(uint32_t i = 0; i < render_views.size(); ++i)
-		render_views[i]->Destroy();
+	FOR_EACH(RenderViewByHandle &render_view_by_handle, render_views)
+	{
+		RenderView *render_view = render_view_by_handle.second;
+
+		render_view->Destroy();
+	}
 
 	d3d_pp.BackBufferWidth = Width;
 	d3d_pp.BackBufferHeight = Height;
@@ -102,9 +98,13 @@ bool RenderD3D9::Reset(uint32_t Width, uint32_t Height)
 	if(hr == D3DERR_INVALIDCALL)
 		return false;//IM_ASSERT(0);
 
-	for(uint32_t i = 0; i < render_views.size(); ++i)
-		if(!render_views[i]->Reset(i, Width, Height))
+	FOR_EACH(RenderViewByHandle &render_view_by_handle, render_views)
+	{
+		RenderView *render_view = render_view_by_handle.second;
+
+		if(!render_view->Reset(Width, Height))
 			return false;
+	}
 
 	return true;
 }
@@ -116,8 +116,8 @@ RenderView *RenderD3D9::CreateRenderView(HWND hWnd, uint32_t Width, uint32_t Hei
 	if(!render_view->Init(render_views.size(), hWnd, Width, Height))
 		return 0;
 
-	render_views.push_back(render_view);
-	return render_views.back();
+	render_views[hWnd] = render_view;
+	return render_views[hWnd];
 }
 
 bool RenderD3D9::CreateRenderTarget(uint32_t Width, uint32_t Height, uint16_t BytesPerPixel)
@@ -309,9 +309,8 @@ LRESULT WINAPI RenderD3D9::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 				//window->OnPaint(window);
 				//if(userinfo.show_title_popup)
 				{
-/*					NewFrame();
-					RenderFrame();
-					//window.render_view->Present();*/
+					NewFrame();
+					RenderFrame(render_views[hWnd]);
 				}
 
 				if(use_render_target && render_target_d3d9.render_to_surface) //if(render_target_d3d9.surface_sysmem) //if(window->render && window->render->render_target)
@@ -423,6 +422,8 @@ RenderViewD3D9::RenderViewD3D9(RenderD3D9 *renderer) : RenderView(renderer), ren
 
 bool RenderViewD3D9::Init(uint32_t i, HWND hWnd, uint32_t Width, uint32_t Height)
 {
+	n = i;
+
 	ZeroMemory(&d3d_pp, sizeof(d3d_pp));
 	d3d_pp.hDeviceWindow = hWnd;
 	d3d_pp.Windowed = TRUE;
@@ -434,7 +435,7 @@ bool RenderViewD3D9::Init(uint32_t i, HWND hWnd, uint32_t Width, uint32_t Height
 	d3d_pp.AutoDepthStencilFormat = D3DFMT_D16;
 	d3d_pp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
 
-	if(i > 0)
+	if(n > 0)
 	{
 		GW_D3D9_CHECK(renderer->d3d_device->CreateAdditionalSwapChain(&d3d_pp, &d3d_swap_chain), _T("Failed to CreateAdditionalSwapChain"));
 	}
@@ -485,8 +486,8 @@ bool RenderViewD3D9::Present()
 	return true;
 }
 
-bool RenderViewD3D9::Reset(uint32_t i, uint32_t Width, uint32_t Height)
+bool RenderViewD3D9::Reset(uint32_t Width, uint32_t Height)
 {
-	return Init(i, d3d_pp.hDeviceWindow, Width, Height);
+	return Init(n, d3d_pp.hDeviceWindow, Width, Height);
 }
 //-----------------------------------------------------------------------------------

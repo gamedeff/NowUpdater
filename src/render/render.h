@@ -37,7 +37,9 @@ class RenderView
 {
 public:
 
-	RenderView(Render *renderer) {}
+	uint32_t n;
+
+	RenderView(Render *renderer) : n(0) {}
 
 	virtual ~RenderView() {}
 
@@ -49,7 +51,7 @@ public:
 
 	virtual bool Present() = 0;
 
-	virtual bool Reset(uint32_t i, uint32_t Width, uint32_t Height) = 0;
+	virtual bool Reset(uint32_t Width, uint32_t Height) = 0;
 };
 //-----------------------------------------------------------------------------------
 class Render
@@ -59,7 +61,9 @@ public:
 	Texture render_target;
 	bool use_render_target;
 
-	std::vector<RenderView *> render_views;
+	std::map<HWND, RenderView *> render_views;
+
+	typedef std::pair<const HWND, RenderView *> RenderViewByHandle;
 
 	Render(bool use_render_target) : use_render_target(use_render_target)
 	{
@@ -72,8 +76,10 @@ public:
 	virtual bool InitDevice(HWND hWnd) = 0;
 	virtual void Destroy()
 	{
-		FOR_EACH(RenderView *render_view, render_views)
+		FOR_EACH(RenderViewByHandle &render_view_by_handle, render_views)
 		{
+			RenderView *render_view = render_view_by_handle.second;
+
 			render_view->Destroy();
 			delete render_view;
 		}

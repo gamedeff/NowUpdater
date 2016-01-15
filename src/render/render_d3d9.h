@@ -38,7 +38,7 @@ public:
 
 	bool Present();
 
-	bool Reset(uint32_t i, uint32_t Width, uint32_t Height);
+	bool Reset(uint32_t Width, uint32_t Height);
 };
 //-----------------------------------------------------------------------------------
 class RenderD3D9 : public Render

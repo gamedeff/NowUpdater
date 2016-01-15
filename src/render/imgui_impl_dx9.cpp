@@ -189,6 +189,9 @@ void ImGui_ImplDX9_Set(void* hwnd, IDirect3DDevice9* device)
 {
 	g_hWnd = (HWND)hwnd;
 	g_d3d_device = device;
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.ImeWindowHandle = g_hWnd;
 }
 
 bool ImGui_ImplDX9_Init(void* hwnd, IDirect3DDevice9* device)
