@@ -74,8 +74,28 @@ string_t nu_app::get_process_name()
 	return string_t(process_name);
 }
 
+template<class T> bool ImGui_Items_StringGetter(void* data, int idx, const char** out_text)
+{
+	static char str_fmt[64] = "%s";
+
+	T::const_iterator *pitems_it = (T::const_iterator *) data;
+	if(out_text)
+	{
+		T::const_iterator items_it = (*pitems_it) + idx;
+
+		//*out_text = items_it->name.c_str();
+		*out_text = _FS_narrow(str_fmt, items_it->c_str());
+	}
+	return true;
+}
+
 bool nu_app::choose_user_ui_pwd(std::string &password)
 {
+	ImGui::PushItemWidth(-1);
+
+	if(!users.empty())
+		ImGui::ListBox("", (int *)&current_user, ImGui_Items_StringGetter< std::vector<std::string> >, &users.begin(), users.size(), 4);
+
 	std::string username;
 
 	if(!users.empty())
@@ -84,7 +104,9 @@ bool nu_app::choose_user_ui_pwd(std::string &password)
 	if(username.empty())
 		username.resize(256);
 
-	if(ImGui::InputText("User: ", &username[0], username.size(), ImGuiInputTextFlags_EnterReturnsTrue))
+	ImGui::Text("User: ");
+	ImGui::SameLine();
+	if(ImGui::InputText("", &username[0], username.size(), ImGuiInputTextFlags_EnterReturnsTrue))
 	{
 		std::vector<std::string>::const_iterator where_it = std::find(users.begin(), users.end(), username);
 		if(where_it != users.end())
@@ -99,19 +121,23 @@ bool nu_app::choose_user_ui_pwd(std::string &password)
 	if(password.empty())
 		password.resize(256);
 
-	if(ImGui::InputText("Password: ", &password[0], password.size(), ImGuiInputTextFlags_EnterReturnsTrue))
+	ImGui::Text("Password: ");
+	ImGui::SameLine();
+	if(ImGui::InputText("", &password[0], password.size(), ImGuiInputTextFlags_EnterReturnsTrue))
 	{
 	}
 
 	if(ImGui::Button("OK"))
 		return true;
 
+	ImGui::PopItemWidth();
+
 	return false;
 }
 
 bool nu_app::choose_user_ui(nu_window *window)
 {
-	std::string password;
+	std::string password = "nowupdater2015";
 	if(choose_user_ui_pwd(password) && !password.empty())
 	{
 		userinfo = new user_info_t(users[current_user], password, &options);
@@ -155,9 +181,12 @@ bool nu_app::init()
 		++user_dir_it;
 	}
 
+	uint32_t desktop_width, desktop_height;
+	get_desktop_size(desktop_width, desktop_height);
+
 	uint32_t w = 400, h = 300;
 
-	return create_and_show_window(title + _T(": Login"), options.x, options.y, w, h, CLOSURE(this, &nu_app::choose_user_ui)) != 0;
+	return create_and_show_window(title + _T(": Login"), desktop_width / 2 - w / 2, desktop_height / 2 - h /2, w, h, CLOSURE(this, &nu_app::choose_user_ui)) != 0;
 }
 
 void nu_app::destroy()
@@ -246,14 +275,14 @@ HWND nu_app::create_window(const string_t &window_title, uint32_t x, uint32_t y,
 #else
 		_T("Window") + 
 #endif
-		string_t(GW_A2T(std::to_string(windows.size())));
+		string_t(GW_A2T(std::to_string(windows.size() + 1)));
 
 	return create_window(window_title, window_class, x, y, w, h, on_idle);
 }
 
 HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle)
 {
-	HWND hWnd = create_window(window_title, options.x, options.y, w, h, on_idle);
+	HWND hWnd = create_window(window_title, x, y, w, h, on_idle);
 	if(!hWnd)
 		return hWnd;
 
@@ -436,11 +465,8 @@ void nu_app::handle_messages(uint32_t popup_w, uint32_t popup_h)
 	timer.stop();
 }
 
-void nu_app::handle_popup(HWND hWnd, uint32_t popup_w, int current_title_index, ImVec2 &pos)
+void nu_app::get_desktop_size(uint32_t &desktop_width, uint32_t &desktop_height)
 {
-	RECT window_rect = { 0 };
-	GetWindowRect(hWnd, &window_rect);
-
 	//unsigned int nScreenWidth;
 	//unsigned int nScreenHeight;
 
@@ -450,8 +476,17 @@ void nu_app::handle_popup(HWND hWnd, uint32_t popup_w, int current_title_index, 
 	RECT desktop_work_area_rect;
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &desktop_work_area_rect, 0);
 
-	uint32_t desktop_work_area_width  = desktop_work_area_rect.right - desktop_work_area_rect.left;
-	uint32_t desktop_work_area_height = desktop_work_area_rect.bottom - desktop_work_area_rect.top;
+	desktop_width  = desktop_work_area_rect.right - desktop_work_area_rect.left;
+	desktop_height = desktop_work_area_rect.bottom - desktop_work_area_rect.top;
+}
+
+void nu_app::handle_popup(HWND hWnd, uint32_t popup_w, int current_title_index, ImVec2 &pos)
+{
+	RECT window_rect = { 0 };
+	GetWindowRect(hWnd, &window_rect);
+
+	uint32_t desktop_work_area_width, desktop_work_area_height;
+	get_desktop_size(desktop_work_area_width, desktop_work_area_height);
 
 	uint32_t window_rect_width  = userinfo->show_title_popup ? popup_w : windows[hWnd].w; //window_rect.right - window_rect.left;
 	uint32_t window_rect_height = userinfo->show_title_popup ? userinfo->get_cover_height(current_title_index) + ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().ItemSpacing.y/*popup_h*/ : windows[hWnd].h; //window_rect.bottom - window_rect.top;
@@ -499,4 +534,3 @@ void nu_app::handle_popup(HWND hWnd, uint32_t popup_w, int current_title_index, 
 		windows[hWnd].y = window_rect.top + pos.y;
 	}
 }
-

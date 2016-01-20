@@ -82,6 +82,8 @@ struct nu_app
 	void handle_messages(uint32_t popup_w, uint32_t popup_h);
 
 	void handle_popup(HWND hWnd, uint32_t popup_w, int current_title_index, ImVec2 &pos);
+
+	void get_desktop_size(uint32_t &desktop_width, uint32_t &desktop_height);
 };
 //-----------------------------------------------------------------------------------
 extern nu_app *app;

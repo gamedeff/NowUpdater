@@ -13,7 +13,6 @@ int main(int argc, char** argv)
 {
 	int exit_code = 0;
 
-	//app = new nu_app("nowupdater", "nowupdater2015");
 	app = new nu_app(_T("Now Updater"));
 
 	if(!app->init())
