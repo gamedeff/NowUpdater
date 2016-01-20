@@ -45,29 +45,11 @@ bool RenderD3D9::InitDevice(HWND hWnd)
 		return false;
 	}
 
-	// Setup ImGui binding
-	ImGui_ImplDX9_Init(hWnd, d3d_device);
-	//ImGuiIO& io = ImGui::GetIO();
-	//ImFont* my_font0 = io.Fonts->AddFontDefault();
-	//ImFont* my_font1 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/DroidSans.ttf", 16.0f);
-	//ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/Karla-Regular.ttf", 16.0f);
-	//ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
-	//ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
-	//ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
-	/*ImGuiIO& io = ImGui::GetIO();
-	io.DisplaySize.x = w; //1920.0f;
-	io.DisplaySize.y = h; //1280.0f;
-	io.DeltaTime = 1.0f/60.0f;
-	io.IniFilename = 0; //"imgui.ini";*/
-
 	return true;
 }
 
 void RenderD3D9::Destroy()
 {
-	//ImGui_ImplDX9_Set(hWnd, d3d_device);
-	ImGui_ImplDX9_Shutdown();
-
 	if(render_target_d3d9.handle)
 	{
 		SAFE_RELEASE(render_target_d3d9.render_to_surface);
@@ -308,8 +290,9 @@ LRESULT WINAPI RenderD3D9::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 
 				//window->OnPaint(window);
 				//if(userinfo.show_title_popup)
+				if(!render_views.empty() && render_views[hWnd])
 				{
-					NewFrame();
+					NewFrame(hWnd);
 					RenderFrame(render_views[hWnd]);
 				}
 
@@ -397,9 +380,9 @@ LRESULT WINAPI RenderD3D9::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-void RenderD3D9::NewFrame()
+void RenderD3D9::NewFrame(HWND hWnd)
 {
-	//ImGui_ImplDX9_Set(hWnd, d3d_device);
+	ImGui_ImplDX9_Set(hWnd, d3d_device);
 	ImGui_ImplDX9_NewFrame();
 }
 
@@ -444,13 +427,39 @@ bool RenderViewD3D9::Init(uint32_t i, HWND hWnd, uint32_t Width, uint32_t Height
 		GW_D3D9_CHECK(renderer->d3d_device->GetSwapChain(0, &d3d_swap_chain), _T("Failed to GetSwapChain"));
 	}
 
-	return true;
+	return InitUI();
 }
 
 void RenderViewD3D9::Destroy()
 {
+	DestroyUI();
+
 	SAFE_RELEASE(d3d_swap_chain_back_buffer);
 	SAFE_RELEASE(d3d_swap_chain);
+}
+
+bool RenderViewD3D9::InitUI()
+{
+	// Setup ImGui binding
+	return ImGui_ImplDX9_Init(d3d_pp.hDeviceWindow, renderer->d3d_device);
+	//ImGuiIO& io = ImGui::GetIO();
+	//ImFont* my_font0 = io.Fonts->AddFontDefault();
+	//ImFont* my_font1 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/DroidSans.ttf", 16.0f);
+	//ImFont* my_font2 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/Karla-Regular.ttf", 16.0f);
+	//ImFont* my_font3 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyClean.ttf", 13.0f); my_font3->DisplayOffset.y += 1;
+	//ImFont* my_font4 = io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f); my_font4->DisplayOffset.y += 1;
+	//ImFont* my_font5 = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, io.Fonts->GetGlyphRangesJapanese());
+	/*ImGuiIO& io = ImGui::GetIO();
+	io.DisplaySize.x = w; //1920.0f;
+	io.DisplaySize.y = h; //1280.0f;
+	io.DeltaTime = 1.0f/60.0f;
+	io.IniFilename = 0; //"imgui.ini";*/
+}
+
+void RenderViewD3D9::DestroyUI()
+{
+	//ImGui_ImplDX9_Set(hWnd, d3d_device);
+	ImGui_ImplDX9_Shutdown();
 }
 
 bool RenderViewD3D9::BeginRender()

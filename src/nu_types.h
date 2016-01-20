@@ -76,6 +76,8 @@ struct image_t
 #include <windows.h>
 #include <tchar.h>
 
+#define POCO_NO_UNWINDOWS
+
 #include <algorithm>
 #include <string>
 #include <vector>

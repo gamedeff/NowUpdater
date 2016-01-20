@@ -34,21 +34,9 @@
 
 #include "render.h"
 
-std::string get_data_path(options_t *options, const std::string &dataname, bool createdirs = false)
+bool load_data(options_t *options, const std::string &username, const std::string &dataname, const pugi::char_t *dataset, Closure<bool(pugi::xml_node &)> read_func)
 {
-	assert(options);
-
-	std::string datapath = Path::dataHome() + options->app_name + Path::separator() + options->data_dir;
-
-	if(createdirs)
-		Poco::File(datapath).createDirectories();
-
-	return datapath + Path::separator() + dataname + options->xml_ext;
-}
-
-bool load_data(options_t *options, const std::string &dataname, const pugi::char_t *dataset, Closure<bool(pugi::xml_node &)> read_func)
-{
-	std::string filename = get_data_path(options, dataname);
+	std::string filename = options->get_data_path(username, dataname);
 
 	pugi::xml_document doc;
 
@@ -63,9 +51,9 @@ bool load_data(options_t *options, const std::string &dataname, const pugi::char
 	return true;
 }
 
-bool save_data(options_t *options, const std::string &dataname, const pugi::char_t *dataset, Closure<bool(pugi::xml_node &)> write_func)
+bool save_data(options_t *options, const std::string &username, const std::string &dataname, const pugi::char_t *dataset, Closure<bool(pugi::xml_node &)> write_func)
 {
-	std::string filename = get_data_path(options, dataname, true);
+	std::string filename = options->get_data_path(username, dataname, true);
 
 	pugi::xml_document doc;
 
@@ -253,11 +241,11 @@ void user_info_t::on_timer(Poco::Timer& timer)
 
 bool user_info_t::load()
 {
-	if(!load_data(options, username, "user", CLOSURE(this, &user_info_t::read)))
+	if(!load_data(options, username, username, "user", CLOSURE(this, &user_info_t::read)))
 		;//return false;
 
 	for(uint32_t i = 0; i < site_users.size(); ++i)
-		if(!load_data(options, sites[site_users[i].site_index]->name, "site", CLOSURE(sites[site_users[i].site_index], &site_info_t::read)))
+		if(!load_data(options, username, sites[site_users[i].site_index]->name, "site", CLOSURE(sites[site_users[i].site_index], &site_info_t::read)))
 			return false;
 
 	if(site_users.empty())
@@ -274,10 +262,10 @@ bool user_info_t::load()
 bool user_info_t::save()
 {
 	for(uint32_t i = 0; i < site_users.size(); ++i)
-		if(!save_data(options, sites[site_users[i].site_index]->name, "site", CLOSURE(sites[site_users[i].site_index], &site_info_t::write)))
+		if(!save_data(options, username, sites[site_users[i].site_index]->name, "site", CLOSURE(sites[site_users[i].site_index], &site_info_t::write)))
 			return false;
 
-	if(!save_data(options, username, "user", CLOSURE(this, &user_info_t::write)))
+	if(!save_data(options, username, username, "user", CLOSURE(this, &user_info_t::write)))
 		return false;
 
 	return true;
@@ -615,10 +603,16 @@ static bool Items_SiteNameGetter(void* data, int idx, const char** out_text)
 	return true;
 }
 
-int user_info_t::main()
+void user_info_t::ui()
 {
 	//static int current_title_index = 0;
 	static int current_title_status = NU_TITLE_STATUS_NOT_ADDED;
+
+	if(show_title_popup)
+	{
+		title_ui(current_title_status);
+		return;
+	}
 
 	//std::vector<user_title_info_t>::iterator current_title_it = titles.begin() + current_title_index;
 
@@ -659,8 +653,6 @@ int user_info_t::main()
 	ImGui::Separator();
 
 	search_ui();
-
-	return current_title_index;
 }
 
 void user_info_t::search_ui()

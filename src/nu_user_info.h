@@ -166,7 +166,7 @@ struct user_info_t
 	uint32_t get_user_title_index_parse(uint32_t si, const std::string &title_name);
 	uint32_t find_and_add_title(uint32_t si, const std::string &title_name);
 
-	int main();
+	void ui();
 
 	void title_ui(int &current_title_status);
 

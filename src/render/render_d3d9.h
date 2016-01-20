@@ -33,6 +33,9 @@ public:
 	bool Init(uint32_t i, HWND hWnd, uint32_t Width = 0, uint32_t Height = 0);
 	void Destroy();
 
+	bool InitUI();
+	void DestroyUI();
+
 	bool BeginRender();
 	bool EndRender();
 
@@ -70,7 +73,7 @@ public:
 
 	bool Reset(uint32_t Width, uint32_t Height);
 
-	void NewFrame();
+	void NewFrame(HWND hWnd);
 	void RenderFrame(RenderView *render_view);
 
 	LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

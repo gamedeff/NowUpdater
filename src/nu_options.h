@@ -10,6 +10,11 @@
 //-----------------------------------------------------------------------------------
 #include "nu_types.h"
 //-----------------------------------------------------------------------------------
+#include "Poco/File.h"
+#include "Poco/Path.h"
+
+using Poco::Path;
+//-----------------------------------------------------------------------------------
 struct options_t
 {
 	bool no_native_windows;
@@ -37,6 +42,21 @@ struct options_t
 				  data_dir("data"),
 				  xml_ext(".xml")
 	{}
+
+	std::string get_data_path(bool createdirs = false)
+	{
+		std::string datapath = Path::dataHome() + app_name + Path::separator() + data_dir;
+
+		if(createdirs)
+			Poco::File(datapath).createDirectories();
+
+		return datapath;
+	}
+
+	std::string get_data_path(const std::string &username, const std::string &dataname, bool createdirs = false)
+	{
+		return get_data_path(createdirs) + Path::separator() + "users" + Path::separator() + username + Path::separator() + dataname + xml_ext;
+	}
 };
 //-----------------------------------------------------------------------------------
 #endif

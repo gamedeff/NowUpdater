@@ -46,6 +46,9 @@ public:
 	virtual bool Init(uint32_t i, HWND hWnd, uint32_t Width = 0, uint32_t Height = 0) = 0;
 	virtual void Destroy() = 0;
 
+	virtual bool InitUI() = 0;
+	virtual void DestroyUI() = 0;
+
 	virtual bool BeginRender() = 0;
 	virtual bool EndRender() = 0;
 
@@ -88,6 +91,17 @@ public:
 	}
 
 	virtual RenderView *CreateRenderView(HWND hWnd, uint32_t Width = 0, uint32_t Height = 0) = 0;
+	virtual void DestroyRenderView(HWND hWnd)
+	{
+		RenderView *render_view = render_views[hWnd];
+		if(render_view)
+		{
+			render_view->Destroy();
+			delete render_view;
+
+			render_views.erase(hWnd);
+		}
+	}
 
 	virtual bool CreateRenderTarget(uint32_t Width, uint32_t Height, uint16_t BytesPerPixel) = 0;
 
@@ -100,7 +114,7 @@ public:
 
 	virtual bool Reset(uint32_t Width, uint32_t Height) = 0;
 
-	virtual void NewFrame() = 0;
+	virtual void NewFrame(HWND hWnd) = 0;
 	virtual void RenderFrame(RenderView *render_view) = 0;
 
 	virtual LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) = 0;
