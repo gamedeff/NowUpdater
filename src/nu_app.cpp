@@ -94,7 +94,7 @@ bool nu_app::choose_user_ui_pwd(std::string &password)
 	ImGui::PushItemWidth(-1);
 
 	if(!users.empty())
-		ImGui::ListBox("", (int *)&current_user, ImGui_Items_StringGetter< std::vector<std::string> >, &users.begin(), users.size(), 4);
+		ImGui::ListBox("##empty", (int *)&current_user, ImGui_Items_StringGetter< std::vector<std::string> >, &users.begin(), users.size(), 4);
 
 	std::string username;
 
@@ -106,7 +106,7 @@ bool nu_app::choose_user_ui_pwd(std::string &password)
 
 	ImGui::Text("User: ");
 	ImGui::SameLine();
-	if(ImGui::InputText("", &username[0], username.size(), ImGuiInputTextFlags_EnterReturnsTrue))
+	if(ImGui::InputText("##username", &username[0], username.size(), ImGuiInputTextFlags_EnterReturnsTrue))
 	{
 		std::vector<std::string>::const_iterator where_it = std::find(users.begin(), users.end(), username);
 		if(where_it != users.end())
@@ -123,7 +123,7 @@ bool nu_app::choose_user_ui_pwd(std::string &password)
 
 	ImGui::Text("Password: ");
 	ImGui::SameLine();
-	if(ImGui::InputText("", &password[0], password.size(), ImGuiInputTextFlags_EnterReturnsTrue))
+	if(ImGui::InputText("##password", &password[0], password.size(), ImGuiInputTextFlags_EnterReturnsTrue))
 	{
 	}
 
