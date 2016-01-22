@@ -66,27 +66,27 @@ void RenderD3D9::Destroy()
 
 bool RenderD3D9::Reset(uint32_t Width, uint32_t Height)
 {
-	//FOR_EACH(RenderViewByHandle &render_view_by_handle, render_views)
-	//{
-	//	RenderView *render_view = render_view_by_handle.second;
+	FOR_EACH(RenderViewByHandle &render_view_by_handle, render_views)
+	{
+		RenderView *render_view = render_view_by_handle.second;
 
-	//	render_view->Destroy();
-	//}
+		render_view->Destroy();
+	}
 
-	//d3d_pp.BackBufferWidth = Width;
-	//d3d_pp.BackBufferHeight = Height;
+	d3d_pp.BackBufferWidth = Width;
+	d3d_pp.BackBufferHeight = Height;
 
-	//HRESULT hr = d3d_device->Reset(&d3d_pp);
-	//if(hr == D3DERR_INVALIDCALL)
-	//	return false;//IM_ASSERT(0);
+	HRESULT hr = d3d_device->Reset(&d3d_pp);
+	if(hr == D3DERR_INVALIDCALL)
+		return false;//IM_ASSERT(0);
 
-	//FOR_EACH(RenderViewByHandle &render_view_by_handle, render_views)
-	//{
-	//	RenderView *render_view = render_view_by_handle.second;
+	FOR_EACH(RenderViewByHandle &render_view_by_handle, render_views)
+	{
+		RenderView *render_view = render_view_by_handle.second;
 
-	//	if(!render_view->Reset(Width, Height))
-	//		return false;
-	//}
+		if(!render_view->Reset(Width, Height))
+			return false;
+	}
 
 	return true;
 }
@@ -373,7 +373,8 @@ LRESULT WINAPI RenderD3D9::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
 		}
 
 		case WM_DESTROY:
-			PostQuitMessage(0);
+			if(0)
+				PostQuitMessage(0);
 			return 0;
 	}
 

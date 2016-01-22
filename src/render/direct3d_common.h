@@ -47,8 +47,8 @@ inline char_t *Direct3D_GetErrorString(const char_t *ErrorFormat, const char_t *
 #define gwThrow_ErrorDirect3D10(x)        gwThrow2(x, Direct3D10_GetErrorString())
 //-----------------------------------------------------------------------------------
 #define GW_D3D_CHECK_(x, error_msg, error_func, onerror) \
-	/*gwDebugPrintFileLine() \
-	gwDebugPrint(_T(#x "\n"));*/ \
+	/*gwOutputStringPrint(GW_TFILE_LINE_STR); \
+	gwOutputStringPrint(_T(#x GW_TOTSTRING("\n")));*/ \
 	if(FAILED(Direct3DLastError = (x))) \
 	{ \
 		error_func(error_msg); \

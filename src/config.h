@@ -69,20 +69,17 @@
 #define GW_LINE_NUMBER __LINE__
 //-----------------------------------------------------------------------------------
 #ifdef GW_UNICODE
-#	define GW_TFIlE__  GW_WIDEN(__FILE__)
-#	define GW_LINE     GW_WIDEN(GW_TOSTRING(GW_LINE_NUMBER))
-#	define GW_DATE     GW_WIDEN(__DATE__)
-#	define GW_TIME     GW_WIDEN(__TIME__)
-#	define GW_DATETIME GW_WIDEN(__TIMESTAMP__)
-#	define GW_FUNCTION GW_WIDEN(__FUNCTION__)
+#	define GW_TOTSTRING GW_WIDEN
 #else
-#	define GW_TFIlE__  __FILE__
-#	define GW_LINE     GW_TOSTRING(GW_LINE_NUMBER)
-#	define GW_DATE     __DATE__
-#	define GW_TIME     __TIME__
-#	define GW_DATETIME __DATETIME__
-#	define GW_FUNCTION __FUNCTION__
+#	define GW_TOTSTRING
 #endif
+//-----------------------------------------------------------------------------------
+#	define GW_TFIlE__  GW_TOTSTRING(__FILE__)
+#	define GW_LINE     GW_TOTSTRING(GW_TOSTRING(GW_LINE_NUMBER))
+#	define GW_DATE     GW_TOTSTRING(__DATE__)
+#	define GW_TIME     GW_TOTSTRING(__TIME__)
+#	define GW_DATETIME GW_TOTSTRING(__TIMESTAMP__)
+#	define GW_FUNCTION GW_TOTSTRING(__FUNCTION__)
 //-----------------------------------------------------------------------------------
 //#ifdef GW_COMPILER_MSVC6_OR_HIGHER
 #	define GW_TFILE_LINE_STR          (GW_TFIlE__ _T("(") GW_LINE _T("): "))

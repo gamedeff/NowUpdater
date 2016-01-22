@@ -39,12 +39,6 @@ struct nu_app
 
 	options_t options;
 
-	std::vector<std::string> users;
-
-	uint32_t current_user;
-
-	user_info_t *userinfo;
-
 	std::map<HWND, nu_window> windows;
 
 	typedef std::pair<const HWND, nu_window> WindowByHandle;
@@ -54,18 +48,13 @@ struct nu_app
 	Poco::FastMutex mutex;
 
 	nu_app(const string_t &title);
+	virtual ~nu_app();
 
 	string_t get_process_name();
 
-	bool init();
+	virtual bool init();
 
-	void destroy();
-
-	bool choose_user_ui_pwd(std::string &password);
-
-	bool choose_user_ui(nu_window *window);
-
-	bool main_ui(nu_window *window);
+	virtual void destroy();
 
 	WNDCLASSEX register_window_class(const char_t *wndclass);
 
@@ -74,6 +63,8 @@ struct nu_app
 	HWND create_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle);
 
 	HWND create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle);
+
+	HWND create_and_show_window_center(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle);
 
 	void destroy_window(HWND hWnd);
 

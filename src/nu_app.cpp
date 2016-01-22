@@ -12,10 +12,6 @@
 #include <Shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
 //-----------------------------------------------------------------------------------
-#include "Poco/DirectoryIterator.h"
-
-using Poco::DirectoryIterator;
-
 using Poco::Timer;
 using Poco::TimerCallback;
 
@@ -36,13 +32,17 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return app->renderer->WndProc(hWnd, msg, wParam, lParam);
 }
 //-----------------------------------------------------------------------------------
-nu_app::nu_app(const string_t &title) : title(title), current_user(0), userinfo(0), renderer(0)
+nu_app::nu_app(const string_t &title) : title(title), renderer(0)
 {
 	options.app_name = GW_T2A(get_process_name());
 
 #ifdef GW_DEBUG
 	options.app_name = options.app_name.substr(0, options.app_name.size() - 1); // remove "d" ending in debug builds
 #endif
+}
+
+nu_app::~nu_app()
+{
 }
 
 string_t nu_app::get_process_name()
@@ -74,133 +74,13 @@ string_t nu_app::get_process_name()
 	return string_t(process_name);
 }
 
-template<class T> bool ImGui_Items_StringGetter(void* data, int idx, const char** out_text)
-{
-	static char str_fmt[64] = "%s";
-
-	T::const_iterator *pitems_it = (T::const_iterator *) data;
-	if(out_text)
-	{
-		T::const_iterator items_it = (*pitems_it) + idx;
-
-		//*out_text = items_it->name.c_str();
-		*out_text = _FS_narrow(str_fmt, items_it->c_str());
-	}
-	return true;
-}
-
-bool nu_app::choose_user_ui_pwd(std::string &password)
-{
-	ImGui::PushItemWidth(-1);
-
-	if(!users.empty())
-		ImGui::ListBox("##empty", (int *)&current_user, ImGui_Items_StringGetter< std::vector<std::string> >, &users.begin(), users.size(), 4);
-
-	std::string username;
-
-	if(!users.empty())
-		username = users[current_user];
-
-	if(username.empty())
-		username.resize(256);
-
-	ImGui::Text("User: ");
-	ImGui::SameLine();
-	if(ImGui::InputText("##username", &username[0], username.size(), ImGuiInputTextFlags_EnterReturnsTrue))
-	{
-		std::vector<std::string>::const_iterator where_it = std::find(users.begin(), users.end(), username);
-		if(where_it != users.end())
-			current_user = where_it - users.begin();
-		else
-		{
-			users.push_back(username);
-			current_user = users.size() - 1;
-		}
-	}
-
-	if(password.empty())
-		password.resize(256);
-
-	ImGui::Text("Password: ");
-	ImGui::SameLine();
-	if(ImGui::InputText("##password", &password[0], password.size(), ImGuiInputTextFlags_EnterReturnsTrue))
-	{
-	}
-
-	if(ImGui::Button("OK"))
-		return true;
-
-	ImGui::PopItemWidth();
-
-	return false;
-}
-
-bool nu_app::choose_user_ui(nu_window *window)
-{
-	std::string password = "nowupdater2015";
-	if(choose_user_ui_pwd(password) && !password.empty())
-	{
-		userinfo = new user_info_t(users[current_user], password, &options);
-		if(!userinfo->init())
-			return false;
-
-		destroy_window(window);
-
-		uint32_t w = 800, h = 600;
-
-		string_t window_title = options.no_native_windows ? title : GW_A2T(userinfo->username + "'s list ");
-
-		return create_and_show_window(window_title, options.x, options.y, w, h, CLOSURE(this, &nu_app::main_ui)) != 0;
-	}
-
-	return false;
-}
-
-bool nu_app::main_ui(nu_window *window)
-{
-	userinfo->ui();
-
-	return false;
-}
-
 bool nu_app::init()
 {
-	users.clear();
-
-	std::string users_path = options.get_data_path() + Path::separator() + "users";
-
-	DirectoryIterator user_dir_it(users_path);
-	DirectoryIterator user_dir_end;
-	while(user_dir_it != user_dir_end)
-	{
-		if(user_dir_it->exists() && user_dir_it->isDirectory() && user_dir_it->canRead())
-		{
-			users.push_back(user_dir_it.name());
-		}
-
-		++user_dir_it;
-	}
-
-	uint32_t desktop_width, desktop_height;
-	get_desktop_size(desktop_width, desktop_height);
-
-	uint32_t w = 400, h = 300;
-
-	return create_and_show_window(title + _T(": Login"), desktop_width / 2 - w / 2, desktop_height / 2 - h /2, w, h, CLOSURE(this, &nu_app::choose_user_ui)) != 0;
+	return true;
 }
 
 void nu_app::destroy()
 {
-	//FOR_EACH(user_info_t *user, users)
-	//{
-	//	user->save();
-
-	//	delete user;
-	//	user = 0;
-	//}
-
-	users.clear();
-
 	if(renderer)
 	{
 		renderer->Destroy();
@@ -304,7 +184,7 @@ HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, ui
 		}
 	}
 
-	windows[hWnd].render_view = renderer->CreateRenderView(hWnd);
+	windows[hWnd].render_view = renderer->CreateRenderView(hWnd, windows[hWnd].w, windows[hWnd].h);
 	if(!windows[hWnd].render_view)
 	{
 		destroy_window(hWnd);
@@ -312,6 +192,14 @@ HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, ui
 	}
 
 	return hWnd;
+}
+
+HWND nu_app::create_and_show_window_center(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle)
+{
+	uint32_t desktop_width, desktop_height;
+	get_desktop_size(desktop_width, desktop_height);
+
+	return create_and_show_window(title + _T(": ") + window_title, desktop_width / 2 - w / 2, desktop_height / 2 - h /2, w, h, on_idle);
 }
 
 void nu_app::destroy_window(HWND hWnd)
@@ -334,6 +222,20 @@ void nu_app::destroy_window(HWND hWnd)
 	UnregisterClass(windows[hWnd].classname.c_str(), windows[hWnd].wc.hInstance);
 
 	windows.erase(hWnd);
+
+	FOR_EACH(WindowByHandle &window_by_handle, windows)
+	{
+		HWND window_hWnd = window_by_handle.first;
+		if(window_hWnd != hWnd)
+			renderer->DestroyRenderView(window_hWnd);
+	}
+
+	FOR_EACH(WindowByHandle &window_by_handle, windows)
+	{
+		HWND window_hWnd = window_by_handle.first;
+		if(window_hWnd != hWnd)
+			windows[window_hWnd].render_view = renderer->CreateRenderView(window_hWnd, windows[window_hWnd].w, windows[window_hWnd].h);
+	}
 }
 
 void nu_app::destroy_window(nu_window *window)
@@ -407,19 +309,19 @@ void nu_app::handle_messages(uint32_t popup_w, uint32_t popup_h)
 				}
 		#endif
 
-				if(userinfo)
-				{
-					if(!timer_started)
-					{
-						timer.start(TimerCallback<user_info_t>(*userinfo, &user_info_t::on_timer));
-						//Thread::sleep(5000);
-						//timer->stop();
+				//if(userinfo)
+				//{
+				//	if(!timer_started)
+				//	{
+				//		timer.start(TimerCallback<user_info_t>(*userinfo, &user_info_t::on_timer));
+				//		//Thread::sleep(5000);
+				//		//timer->stop();
 
-						timer_started = true;
-					}
+				//		timer_started = true;
+				//	}
 
-					handle_popup(hWnd, popup_w, userinfo->current_title_index, pos);
-				}
+				//	handle_popup(hWnd, popup_w, userinfo->current_title_index, pos);
+				//}
 
 				bool window_closed = false;
 
@@ -482,55 +384,55 @@ void nu_app::get_desktop_size(uint32_t &desktop_width, uint32_t &desktop_height)
 
 void nu_app::handle_popup(HWND hWnd, uint32_t popup_w, int current_title_index, ImVec2 &pos)
 {
-	RECT window_rect = { 0 };
-	GetWindowRect(hWnd, &window_rect);
+	//RECT window_rect = { 0 };
+	//GetWindowRect(hWnd, &window_rect);
 
-	uint32_t desktop_work_area_width, desktop_work_area_height;
-	get_desktop_size(desktop_work_area_width, desktop_work_area_height);
+	//uint32_t desktop_work_area_width, desktop_work_area_height;
+	//get_desktop_size(desktop_work_area_width, desktop_work_area_height);
 
-	uint32_t window_rect_width  = userinfo->show_title_popup ? popup_w : windows[hWnd].w; //window_rect.right - window_rect.left;
-	uint32_t window_rect_height = userinfo->show_title_popup ? userinfo->get_cover_height(current_title_index) + ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().ItemSpacing.y/*popup_h*/ : windows[hWnd].h; //window_rect.bottom - window_rect.top;
+	//uint32_t window_rect_width  = userinfo->show_title_popup ? popup_w : windows[hWnd].w; //window_rect.right - window_rect.left;
+	//uint32_t window_rect_height = userinfo->show_title_popup ? userinfo->get_cover_height(current_title_index) + ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().ItemSpacing.y/*popup_h*/ : windows[hWnd].h; //window_rect.bottom - window_rect.top;
 
-	window_rect.left = userinfo->show_title_popup ? desktop_work_area_width - window_rect_width : windows[hWnd].x;
-	window_rect.top  = userinfo->show_title_popup ? desktop_work_area_height - window_rect_height : windows[hWnd].y;
-	window_rect.right = window_rect.left + window_rect_width;
-	window_rect.bottom = window_rect.top + window_rect_height;
+	//window_rect.left = userinfo->show_title_popup ? desktop_work_area_width - window_rect_width : windows[hWnd].x;
+	//window_rect.top  = userinfo->show_title_popup ? desktop_work_area_height - window_rect_height : windows[hWnd].y;
+	//window_rect.right = window_rect.left + window_rect_width;
+	//window_rect.bottom = window_rect.top + window_rect_height;
 
-	static bool hiden = false;
+	//static bool hiden = false;
 
-	if(userinfo->show_title_popup)
-	{
-		AdjustWindowRectEx(&window_rect, GetWindowLong(hWnd, GWL_STYLE), FALSE, GetWindowLong(hWnd, GWL_EXSTYLE));
+	//if(userinfo->show_title_popup)
+	//{
+	//	AdjustWindowRectEx(&window_rect, GetWindowLong(hWnd, GWL_STYLE), FALSE, GetWindowLong(hWnd, GWL_EXSTYLE));
 
-		window_rect_width  = window_rect.right - window_rect.left;
-		window_rect_height = window_rect.bottom - window_rect.top;
+	//	window_rect_width  = window_rect.right - window_rect.left;
+	//	window_rect_height = window_rect.bottom - window_rect.top;
 
-		if(!hiden)
-		{
-			ShowWindow(hWnd, SW_HIDE);
-			hiden = true;
-		}
+	//	if(!hiden)
+	//	{
+	//		ShowWindow(hWnd, SW_HIDE);
+	//		hiden = true;
+	//	}
 
-		SetWindowPos(hWnd, /*HWND_TOPMOST*/HWND_TOP, window_rect.left, window_rect.top, window_rect_width, window_rect_height, 0/*SWP_NOREDRAW*//*SWP_HIDEWINDOW*/);
-		if(options.animate_popup)
-			AnimateWindow(hWnd, options.popup_delay, AW_SLIDE | AW_ACTIVATE | AW_VER_NEGATIVE);
-		else
-		{
-			ShowWindow(hWnd, SW_SHOWNORMAL);
-			//Sleep(options.popup_delay);
-		}
-		//UpdateWindow(hWnd);
-	}
-	else if(hiden)
-	{
-		SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, window_rect_width, window_rect_height, 0);
+	//	SetWindowPos(hWnd, /*HWND_TOPMOST*/HWND_TOP, window_rect.left, window_rect.top, window_rect_width, window_rect_height, 0/*SWP_NOREDRAW*//*SWP_HIDEWINDOW*/);
+	//	if(options.animate_popup)
+	//		AnimateWindow(hWnd, options.popup_delay, AW_SLIDE | AW_ACTIVATE | AW_VER_NEGATIVE);
+	//	else
+	//	{
+	//		ShowWindow(hWnd, SW_SHOWNORMAL);
+	//		//Sleep(options.popup_delay);
+	//	}
+	//	//UpdateWindow(hWnd);
+	//}
+	//else if(hiden)
+	//{
+	//	SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, window_rect_width, window_rect_height, 0);
 
-		ShowWindow(hWnd, SW_SHOWNORMAL);
-		hiden = false;
-	}
-	else
-	{
-		windows[hWnd].x = window_rect.left + pos.x;
-		windows[hWnd].y = window_rect.top + pos.y;
-	}
+	//	ShowWindow(hWnd, SW_SHOWNORMAL);
+	//	hiden = false;
+	//}
+	//else
+	//{
+	//	windows[hWnd].x = window_rect.left + pos.x;
+	//	windows[hWnd].y = window_rect.top + pos.y;
+	//}
 }
