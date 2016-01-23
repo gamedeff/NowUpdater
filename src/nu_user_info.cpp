@@ -980,19 +980,6 @@ void user_info_t::title_ui(int &current_title_status)
 	if(sites[site_users[current_site].site_index]->titles.empty())
 		return;
 
-	if(!sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_thumb_uri.empty())
-	{
-		if(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.empty())
-		{
-			sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data = sites[site_users[current_site].site_index]->http->go_to(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_thumb_uri, sites[site_users[current_site].site_index]->login_cookie);
-		}
-
-		if(!sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.empty() && !sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture.handle)
-		{
-			//g_render->LoadImage(sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.c_str(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture_data.size(), sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[current_title_index].index].cover_texture);
-		}
-	}
-
 	ImVec2 tex_screen_pos = ImGui::GetCursorScreenPos();
 	float tex_w = get_cover_width(current_title_index);
 	float tex_h = get_cover_height(current_title_index);

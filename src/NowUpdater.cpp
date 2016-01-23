@@ -68,6 +68,8 @@ bool NowUpdater::choose_user_ui(nu_window *window)
 		}
 	}
 
+	ImGui::SameLine();
+
 	if(ImGui::Button("New user"))
 	{
 		uint32_t w = 400, h = 300;
@@ -110,6 +112,18 @@ bool NowUpdater::new_user_ui(nu_window *window)
 		}
 	}
 
+	ImGui::SameLine();
+
+	if(ImGui::Button("Cancel"))
+	{
+		assert(&windows[new_user_window] == window);
+
+		destroy_window(window);
+		new_user_window = 0;
+
+		return false;
+	}
+
 	return false;
 }
 
@@ -127,6 +141,25 @@ bool NowUpdater::create_user(std::string username, std::string password)
 	userinfo = new user_info_t(users[current_user], password, &options);
 	if(!userinfo->init())
 		return false;
+
+	for(uint32_t i = 0; i < userinfo->site_users.size(); ++i)
+	{
+		uint32_t si = userinfo->site_users[i].site_index;
+
+		for(uint32_t k = 0; k < userinfo->site_users[i].user_titles.size(); ++k)
+			if(!userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_thumb_uri.empty())
+			{
+				if(userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.empty())
+				{
+					userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data = userinfo->sites[si]->http->go_to(userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_thumb_uri, userinfo->sites[si]->login_cookie);
+				}
+
+				if(!userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.empty() && !userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture.handle)
+				{
+					renderer->LoadImage(userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.c_str(), userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.size(), userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture);
+				}
+			}
+	}
 
 	uint32_t w = 800, h = 600;
 
