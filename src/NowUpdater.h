@@ -14,6 +14,7 @@
 //-----------------------------------------------------------------------------------
 #include "Poco\Thread.h"
 #include "Poco\RunnableAdapter.h"
+#include "Poco\Timer.h"
 //-----------------------------------------------------------------------------------
 struct NowUpdater : public nu_app
 {
@@ -27,6 +28,9 @@ struct NowUpdater : public nu_app
 
 	Poco::Thread download_images_thread;
 	Poco::RunnableAdapter<NowUpdater> download_images_thread_adapter;
+
+	Poco::Timer timer;
+	bool timer_started;
 
 	NowUpdater();
 
@@ -44,6 +48,9 @@ struct NowUpdater : public nu_app
 	void download_images();
 
 	bool main_ui(nu_window *window);
+	bool main_update(nu_window *window);
+
+	void handle_popup(HWND hWnd);
 };
 //-----------------------------------------------------------------------------------
 #endif

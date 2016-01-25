@@ -34,7 +34,8 @@ template<class T> bool ImGui_Items_StringGetter(void* data, int idx, const char*
 	ImGui::SameLine(); \
 	ImGui::InputText("##" GW_TOSTRING(b), &b[0], b.size());
 //-----------------------------------------------------------------------------------
-NowUpdater::NowUpdater() : nu_app(_T("Now Updater")), current_user(0), userinfo(0), choose_user_window(0), new_user_window(0), options_window(0), main_window(0), download_images_thread_adapter(*this, &NowUpdater::download_images)
+NowUpdater::NowUpdater() : nu_app(_T("Now Updater")), current_user(0), userinfo(0), choose_user_window(0), new_user_window(0), options_window(0), main_window(0),
+														timer(0, options.mediaplayer_check_delay), timer_started(false), download_images_thread_adapter(*this, &NowUpdater::download_images)
 {
 }
 
@@ -150,6 +151,8 @@ bool NowUpdater::create_user(std::string username, std::string password)
 	if(!main_window)
 		return false;
 
+	windows[main_window].on_update = CLOSURE(this, &NowUpdater::main_update);
+
 	if(options.preload_images)
 	{
 		download_images();
@@ -193,11 +196,89 @@ bool NowUpdater::main_ui(nu_window *window)
 {
 	assert(&windows[main_window] == window);
 
-	load_images();
-
 	userinfo->ui();
 
 	return false;
+}
+
+bool NowUpdater::main_update(nu_window *window)
+{
+	assert(&windows[main_window] == window);
+
+	load_images();
+
+	if(userinfo)
+	{
+		if(!timer_started)
+		{
+			timer.start(Poco::TimerCallback<user_info_t>(*userinfo, &user_info_t::on_timer));
+			//Thread::sleep(5000);
+			//timer->stop();
+
+			timer_started = true;
+		}
+
+		HWND hWnd = get_window_handle(window);
+		if(hWnd)
+			handle_popup(hWnd);
+	}
+
+	return false;
+}
+
+void NowUpdater::handle_popup(HWND hWnd)
+{
+	RECT window_rect = { 0 };
+	GetWindowRect(hWnd, &window_rect);
+
+	uint32_t desktop_work_area_width, desktop_work_area_height;
+	get_desktop_size(desktop_work_area_width, desktop_work_area_height);
+
+	uint32_t window_rect_width  = userinfo->show_title_popup ? popup_w : windows[hWnd].w; //window_rect.right - window_rect.left;
+	uint32_t window_rect_height = userinfo->show_title_popup ? userinfo->get_cover_height(userinfo->current_title_index) + ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().ItemSpacing.y/*popup_h*/ : windows[hWnd].h; //window_rect.bottom - window_rect.top;
+
+	window_rect.left = userinfo->show_title_popup ? desktop_work_area_width - window_rect_width : windows[hWnd].x;
+	window_rect.top  = userinfo->show_title_popup ? desktop_work_area_height - window_rect_height : windows[hWnd].y;
+	window_rect.right = window_rect.left + window_rect_width;
+	window_rect.bottom = window_rect.top + window_rect_height;
+
+	static bool hiden = false;
+
+	if(userinfo->show_title_popup)
+	{
+		AdjustWindowRectEx(&window_rect, GetWindowLong(hWnd, GWL_STYLE), FALSE, GetWindowLong(hWnd, GWL_EXSTYLE));
+
+		window_rect_width  = window_rect.right - window_rect.left;
+		window_rect_height = window_rect.bottom - window_rect.top;
+
+		if(!hiden)
+		{
+			ShowWindow(hWnd, SW_HIDE);
+			hiden = true;
+		}
+
+		SetWindowPos(hWnd, /*HWND_TOPMOST*/HWND_TOP, window_rect.left, window_rect.top, window_rect_width, window_rect_height, 0/*SWP_NOREDRAW*//*SWP_HIDEWINDOW*/);
+		if(options.animate_popup)
+			AnimateWindow(hWnd, options.popup_delay, AW_SLIDE | AW_ACTIVATE | AW_VER_NEGATIVE);
+		else
+		{
+			ShowWindow(hWnd, SW_SHOWNORMAL);
+			//Sleep(options.popup_delay);
+		}
+		//UpdateWindow(hWnd);
+	}
+	else if(hiden)
+	{
+		SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, window_rect_width, window_rect_height, 0);
+
+		ShowWindow(hWnd, SW_SHOWNORMAL);
+		hiden = false;
+	}
+	else
+	{
+		windows[hWnd].x = window_rect.left + pos.x;
+		windows[hWnd].y = window_rect.top + pos.y;
+	}
 }
 
 bool NowUpdater::init()
@@ -248,6 +329,9 @@ void NowUpdater::destroy()
 	//	user = 0;
 	//}
 
+	if(timer_started)
+		timer.stop();
+
 	users.clear();
 
 	delete userinfo;
@@ -267,9 +351,7 @@ int main(int argc, char** argv)
 		goto end;
 	}
 
-	uint32_t popup_w = 400, popup_h = 300;
-
-	app->handle_messages(popup_w, popup_h);
+	app->handle_messages();
 
 end:
 

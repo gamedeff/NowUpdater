@@ -32,7 +32,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return app->renderer->WndProc(hWnd, msg, wParam, lParam);
 }
 //-----------------------------------------------------------------------------------
-nu_app::nu_app(const string_t &title) : title(title), renderer(0)
+nu_app::nu_app(const string_t &title) : title(title), renderer(0), pos(0, 0), popup_w(400), popup_h(300)
 {
 	options.app_name = GW_T2A(get_process_name());
 
@@ -107,9 +107,9 @@ WNDCLASSEX nu_app::register_window_class(const char_t *wndclass)
 	return wc;
 }
 
-HWND nu_app::create_window(const string_t &window_title, const string_t &window_class, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle)
+HWND nu_app::create_window(const string_t &window_title, const string_t &window_class, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
 {
-	nu_window window(on_idle);
+	nu_window window;
 
 	window.title = window_title;
 	window.classname = window_class;
@@ -118,7 +118,7 @@ HWND nu_app::create_window(const string_t &window_title, const string_t &window_
 	window.y = y;
 	window.w = w;
 	window.h = h;
-	//window.on_idle = on_idle;
+	window.on_gui = on_gui;
 
 	// Create application window
 	HWND hWnd = CreateWindow(window.classname.c_str(), window.title.c_str(), options.no_native_windows ? WS_POPUP : WS_OVERLAPPEDWINDOW,
@@ -146,7 +146,7 @@ HWND nu_app::create_window(const string_t &window_title, const string_t &window_
 	return hWnd;
 }
 
-HWND nu_app::create_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle)
+HWND nu_app::create_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
 {
 	string_t window_class = string_t(GW_A2T(options.app_name)) +
 
@@ -157,12 +157,12 @@ HWND nu_app::create_window(const string_t &window_title, uint32_t x, uint32_t y,
 #endif
 		string_t(GW_A2T(std::to_string(windows.size() + 1)));
 
-	return create_window(window_title, window_class, x, y, w, h, on_idle);
+	return create_window(window_title, window_class, x, y, w, h, on_gui);
 }
 
-HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle)
+HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
 {
-	HWND hWnd = create_window(window_title, x, y, w, h, on_idle);
+	HWND hWnd = create_window(window_title, x, y, w, h, on_gui);
 	if(!hWnd)
 		return hWnd;
 
@@ -194,12 +194,12 @@ HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, ui
 	return hWnd;
 }
 
-HWND nu_app::create_and_show_window_center(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle)
+HWND nu_app::create_and_show_window_center(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
 {
 	uint32_t desktop_width, desktop_height;
 	get_desktop_size(desktop_width, desktop_height);
 
-	return create_and_show_window(title + _T(": ") + window_title, desktop_width / 2 - w / 2, desktop_height / 2 - h /2, w, h, on_idle);
+	return create_and_show_window(title + _T(": ") + window_title, desktop_width / 2 - w / 2, desktop_height / 2 - h /2, w, h, on_gui);
 }
 
 void nu_app::destroy_window(HWND hWnd)
@@ -238,25 +238,27 @@ void nu_app::destroy_window(HWND hWnd)
 	}
 }
 
-void nu_app::destroy_window(nu_window *window)
+HWND nu_app::get_window_handle(nu_window *window)
 {
 	for(std::map<HWND, nu_window>::iterator window_it = windows.begin(); window_it != windows.end(); ++window_it)
 		if(window_it->second.classname == window->classname)
-		{
-			destroy_window(window_it->first);
-			break;
-		}
+			return window_it->first;
+
+	return 0;
 }
 
-void nu_app::handle_messages(uint32_t popup_w, uint32_t popup_h)
+void nu_app::destroy_window(nu_window *window)
+{
+	HWND hWnd = get_window_handle(window);
+	if(hWnd)
+		destroy_window(hWnd);
+}
+
+void nu_app::handle_messages()
 {
 	Poco::FastMutex::ScopedLock lock(mutex);
 
 	bool show_another_window = false;
-	ImVec2 pos = ImVec2(0, 0);
-
-	Timer timer(0, options.mediaplayer_check_delay); // fire immediately, repeat every 5000 ms
-	bool timer_started = false;
 
 	// Main loop
 	MSG msg;
@@ -309,21 +311,7 @@ void nu_app::handle_messages(uint32_t popup_w, uint32_t popup_h)
 				}
 		#endif
 
-				//if(userinfo)
-				//{
-				//	if(!timer_started)
-				//	{
-				//		timer.start(TimerCallback<user_info_t>(*userinfo, &user_info_t::on_timer));
-				//		//Thread::sleep(5000);
-				//		//timer->stop();
-
-				//		timer_started = true;
-				//	}
-
-				//	handle_popup(hWnd, popup_w, userinfo->current_title_index, pos);
-				//}
-
-				bool window_closed = false;
+				bool window_closed = window.on_update ? window.on_update(&window) : false;
 
 				if(!window_closed)
 				{
@@ -336,8 +324,8 @@ void nu_app::handle_messages(uint32_t popup_w, uint32_t popup_h)
 					ImGui::Begin(GW_T2A(window.title.c_str()), &show_another_window, options.no_native_windows ? 0 : ImGuiWindowFlags_NoTitleBar/*ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar*/);
 				}
 
-				if(window.on_idle)
-					window_closed = window.on_idle(&window);
+				if(window.on_gui)
+					window_closed = window.on_gui(&window);
 
 				if(!window_closed)
 				{
@@ -363,8 +351,6 @@ void nu_app::handle_messages(uint32_t popup_w, uint32_t popup_h)
 			}
 		}
 	}
-
-	timer.stop();
 }
 
 void nu_app::get_desktop_size(uint32_t &desktop_width, uint32_t &desktop_height)
@@ -382,57 +368,3 @@ void nu_app::get_desktop_size(uint32_t &desktop_width, uint32_t &desktop_height)
 	desktop_height = desktop_work_area_rect.bottom - desktop_work_area_rect.top;
 }
 
-void nu_app::handle_popup(HWND hWnd, uint32_t popup_w, int current_title_index, ImVec2 &pos)
-{
-	//RECT window_rect = { 0 };
-	//GetWindowRect(hWnd, &window_rect);
-
-	//uint32_t desktop_work_area_width, desktop_work_area_height;
-	//get_desktop_size(desktop_work_area_width, desktop_work_area_height);
-
-	//uint32_t window_rect_width  = userinfo->show_title_popup ? popup_w : windows[hWnd].w; //window_rect.right - window_rect.left;
-	//uint32_t window_rect_height = userinfo->show_title_popup ? userinfo->get_cover_height(current_title_index) + ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().ItemSpacing.y/*popup_h*/ : windows[hWnd].h; //window_rect.bottom - window_rect.top;
-
-	//window_rect.left = userinfo->show_title_popup ? desktop_work_area_width - window_rect_width : windows[hWnd].x;
-	//window_rect.top  = userinfo->show_title_popup ? desktop_work_area_height - window_rect_height : windows[hWnd].y;
-	//window_rect.right = window_rect.left + window_rect_width;
-	//window_rect.bottom = window_rect.top + window_rect_height;
-
-	//static bool hiden = false;
-
-	//if(userinfo->show_title_popup)
-	//{
-	//	AdjustWindowRectEx(&window_rect, GetWindowLong(hWnd, GWL_STYLE), FALSE, GetWindowLong(hWnd, GWL_EXSTYLE));
-
-	//	window_rect_width  = window_rect.right - window_rect.left;
-	//	window_rect_height = window_rect.bottom - window_rect.top;
-
-	//	if(!hiden)
-	//	{
-	//		ShowWindow(hWnd, SW_HIDE);
-	//		hiden = true;
-	//	}
-
-	//	SetWindowPos(hWnd, /*HWND_TOPMOST*/HWND_TOP, window_rect.left, window_rect.top, window_rect_width, window_rect_height, 0/*SWP_NOREDRAW*//*SWP_HIDEWINDOW*/);
-	//	if(options.animate_popup)
-	//		AnimateWindow(hWnd, options.popup_delay, AW_SLIDE | AW_ACTIVATE | AW_VER_NEGATIVE);
-	//	else
-	//	{
-	//		ShowWindow(hWnd, SW_SHOWNORMAL);
-	//		//Sleep(options.popup_delay);
-	//	}
-	//	//UpdateWindow(hWnd);
-	//}
-	//else if(hiden)
-	//{
-	//	SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, window_rect_width, window_rect_height, 0);
-
-	//	ShowWindow(hWnd, SW_SHOWNORMAL);
-	//	hiden = false;
-	//}
-	//else
-	//{
-	//	windows[hWnd].x = window_rect.left + pos.x;
-	//	windows[hWnd].y = window_rect.top + pos.y;
-	//}
-}

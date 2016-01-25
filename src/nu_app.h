@@ -27,10 +27,11 @@ struct nu_window
 
 	RenderView *render_view;
 
-	Closure<bool(nu_window *)> on_idle;
+	Closure<bool(nu_window *)> on_update;
+	Closure<bool(nu_window *)> on_gui;
 
-	nu_window() {}
-	nu_window(Closure<bool(nu_window *)> on_idle) : render_view(0), on_idle(on_idle) {}
+	nu_window() : render_view(0) {}
+	//nu_window(Closure<bool(nu_window *)> on_idle) : render_view(0), on_idle(on_idle) {}
 };
 //-----------------------------------------------------------------------------------
 struct nu_app
@@ -44,6 +45,10 @@ struct nu_app
 	typedef std::pair<const HWND, nu_window> WindowByHandle;
 
 	Render *renderer;
+
+	ImVec2 pos;
+
+	uint32_t popup_w, popup_h;
 
 	Poco::FastMutex mutex;
 
@@ -70,11 +75,11 @@ struct nu_app
 
 	void destroy_window(nu_window *window);
 
-	void handle_messages(uint32_t popup_w, uint32_t popup_h);
-
-	void handle_popup(HWND hWnd, uint32_t popup_w, int current_title_index, ImVec2 &pos);
+	void handle_messages();
 
 	void get_desktop_size(uint32_t &desktop_width, uint32_t &desktop_height);
+
+	HWND get_window_handle(nu_window *window);
 };
 //-----------------------------------------------------------------------------------
 extern nu_app *app;
