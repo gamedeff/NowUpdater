@@ -34,7 +34,7 @@ template<class T> bool ImGui_Items_StringGetter(void* data, int idx, const char*
 	ImGui::SameLine(); \
 	ImGui::InputText("##" GW_TOSTRING(b), &b[0], b.size());
 //-----------------------------------------------------------------------------------
-NowUpdater::NowUpdater() : nu_app(_T("Now Updater")), current_user(0), userinfo(0), choose_user_window(0), new_user_window(0), options_window(0), main_window(0)
+NowUpdater::NowUpdater() : nu_app(_T("Now Updater")), current_user(0), userinfo(0), choose_user_window(0), new_user_window(0), options_window(0), main_window(0), download_images_thread_adapter(*this, &NowUpdater::download_images)
 {
 }
 
@@ -142,36 +142,58 @@ bool NowUpdater::create_user(std::string username, std::string password)
 	if(!userinfo->init())
 		return false;
 
-	for(uint32_t i = 0; i < userinfo->site_users.size(); ++i)
-	{
-		uint32_t si = userinfo->site_users[i].site_index;
-
-		for(uint32_t k = 0; k < userinfo->site_users[i].user_titles.size(); ++k)
-			if(!userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_thumb_uri.empty())
-			{
-				if(userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.empty())
-				{
-					userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data = userinfo->sites[si]->http->go_to(userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_thumb_uri, userinfo->sites[si]->login_cookie);
-				}
-
-				if(!userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.empty() && !userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture.handle)
-				{
-					renderer->LoadImage(userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.c_str(), userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.size(), userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture);
-				}
-			}
-	}
-
 	uint32_t w = 800, h = 600;
 
 	string_t window_title = options.no_native_windows ? title : GW_A2T(userinfo->username + "'s list ");
 
 	main_window = create_and_show_window(window_title, options.x, options.y, w, h, CLOSURE(this, &NowUpdater::main_ui));
+	if(!main_window)
+		return false;
+
+	if(options.preload_images)
+	{
+		download_images();
+
+		load_images();
+	}
+	else if(!download_images_thread.isRunning())
+	{
+		download_images_thread.start(download_images_thread_adapter);
+	}
+
 	return main_window != 0;
+}
+
+void NowUpdater::download_images()
+{
+	for(uint32_t i = 0; i < userinfo->site_users.size(); ++i)
+	{
+		uint32_t si = userinfo->site_users[i].site_index;
+
+		for(uint32_t k = 0; k < userinfo->site_users[i].user_titles.size(); ++k)
+			userinfo->sites[si]->download_title_images(userinfo->site_users[i].user_titles[k].index);
+	}
+}
+
+void NowUpdater::load_images()
+{
+	for(uint32_t i = 0; i < userinfo->site_users.size(); ++i)
+	{
+		uint32_t si = userinfo->site_users[i].site_index;
+
+		for(uint32_t k = 0; k < userinfo->site_users[i].user_titles.size(); ++k)
+			if(!userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.empty() && !userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture.handle)
+			{
+				renderer->LoadImage(userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.c_str(), userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.size(), userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture);
+			}
+	}
 }
 
 bool NowUpdater::main_ui(nu_window *window)
 {
 	assert(&windows[main_window] == window);
+
+	load_images();
 
 	userinfo->ui();
 
@@ -196,10 +218,24 @@ bool NowUpdater::init()
 		++user_dir_it;
 	}
 
-	uint32_t w = 400, h = 300;
+	if(users.empty() || users.size() > 1)
+	{
+		uint32_t w = 400, h = 300;
 
-	choose_user_window = create_and_show_window_center(_T("Login"), w, h, CLOSURE(this, &NowUpdater::choose_user_ui));
-	return choose_user_window != 0;
+		choose_user_window = create_and_show_window_center(_T("Login"), w, h, CLOSURE(this, &NowUpdater::choose_user_ui));
+		return choose_user_window != 0;
+	}
+	else
+	{
+		std::string username;
+
+		if(!users.empty())
+			username = users[current_user];
+
+		std::string password = "nowupdater2015";
+
+		return create_user(username, password);
+	}
 }
 
 void NowUpdater::destroy()
@@ -213,6 +249,8 @@ void NowUpdater::destroy()
 	//}
 
 	users.clear();
+
+	delete userinfo;
 
 	nu_app::destroy();
 }

@@ -27,6 +27,8 @@ struct options_t
 
 	uint32_t mediaplayer_check_delay;
 
+	bool preload_images;
+
 	uint32_t x, y;
 
 	std::string app_name, data_dir, xml_ext;
@@ -37,6 +39,7 @@ struct options_t
 				  min_rating(1),
 				  max_rating(10),
 				  mediaplayer_check_delay(5000),
+				  preload_images(false),
 				  x(100),
 				  y(100),
 				  data_dir("data"),

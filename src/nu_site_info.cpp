@@ -131,6 +131,17 @@ bool site_info_t::parse_user_title_info(pugi::xml_node &node, user_title_info_t 
 //#undef NU_PARSE_F
 #undef NU_PARSE
 
+void site_info_t::download_title_images(uint32_t i)
+{
+	if(!titles[i].cover_thumb_uri.empty())
+	{
+		if(titles[i].cover_texture_data.empty())
+		{
+			titles[i].cover_texture_data = http->go_to(titles[i].cover_thumb_uri, login_cookie);
+		}
+	}
+}
+
 bool site_info_t::send_request_change_title_episodes_watched_num(site_user_info_t &site_user, uint32_t i, uint32_t episodes_watched_num)
 {
 	return send_request_change_title_episodes_watched_num(site_user, titles[i], episodes_watched_num);

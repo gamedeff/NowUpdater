@@ -12,6 +12,9 @@
 //-----------------------------------------------------------------------------------
 #include "nu_app.h"
 //-----------------------------------------------------------------------------------
+#include "Poco\Thread.h"
+#include "Poco\RunnableAdapter.h"
+//-----------------------------------------------------------------------------------
 struct NowUpdater : public nu_app
 {
 	std::vector<std::string> users;
@@ -21,6 +24,9 @@ struct NowUpdater : public nu_app
 	user_info_t *userinfo;
 
 	HWND choose_user_window, new_user_window, options_window, main_window;
+
+	Poco::Thread download_images_thread;
+	Poco::RunnableAdapter<NowUpdater> download_images_thread_adapter;
 
 	NowUpdater();
 
@@ -33,6 +39,10 @@ struct NowUpdater : public nu_app
 	bool new_user_ui(nu_window *window);
 
 	bool create_user(std::string username, std::string password);
+
+	void load_images();
+	void download_images();
+
 	bool main_ui(nu_window *window);
 };
 //-----------------------------------------------------------------------------------

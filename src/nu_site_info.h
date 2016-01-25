@@ -217,6 +217,8 @@ struct site_info_t
 
 	bool parse_user_title_info(site_user_info_t &site_user, user_title_info_t &user_title);
 
+	void download_title_images(uint32_t i);
+
 	PUGI_SERIALIZATION_START
 	{
 		PUGI_SERIALIZE_ATTRIB(name);
