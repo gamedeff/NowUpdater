@@ -34,6 +34,30 @@ struct nu_window
 	//nu_window(Closure<bool(nu_window *)> on_idle) : render_view(0), on_idle(on_idle) {}
 };
 //-----------------------------------------------------------------------------------
+enum nu_animation_kind
+{
+	NU_ANIMATION_SLIDE,
+};
+//-----------------------------------------------------------------------------------
+enum nu_animation_direction
+{
+	NU_ANIMATION_HOR_POSITIVE, // Animates the window from left to right
+	NU_ANIMATION_HOR_NEGATIVE, // Animates the window from right to left
+	NU_ANIMATION_VER_POSITIVE, // Animates the window from top to bottom
+	NU_ANIMATION_VER_NEGATIVE  // Animates the window from bottom to top
+};
+//-----------------------------------------------------------------------------------
+struct nu_animation
+{
+	bool active;
+	uint32_t id;
+	uint32_t time, fps, current_frame, frames_num;
+	nu_animation_kind kind;
+	nu_animation_direction direction;
+
+	nu_animation() : active(false), id(0), time(1000),  fps(30), current_frame(0), frames_num(0) {}
+};
+//-----------------------------------------------------------------------------------
 struct nu_app
 {
 	string_t title;
@@ -49,6 +73,8 @@ struct nu_app
 	ImVec2 pos;
 
 	uint32_t popup_w, popup_h;
+
+	nu_animation animation;
 
 	Poco::FastMutex mutex;
 
@@ -80,6 +106,10 @@ struct nu_app
 	void get_desktop_size(uint32_t &desktop_width, uint32_t &desktop_height);
 
 	HWND get_window_handle(nu_window *window);
+
+	void start_animation(HWND hWnd);
+
+	void on_timer(HWND hWnd, UINT_PTR nIDEvent);
 };
 //-----------------------------------------------------------------------------------
 extern nu_app *app;

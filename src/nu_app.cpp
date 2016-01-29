@@ -24,8 +24,24 @@ using Poco::TimerCallback;
 //-----------------------------------------------------------------------------------
 nu_app *app = 0;
 //-----------------------------------------------------------------------------------
+#define ANIMATION_TIMER 1234
+//-----------------------------------------------------------------------------------
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	switch(msg)
+	{
+		case WM_TIMER:
+			//switch(wParam) 
+			//{ 
+			//	case ANIMATION_TIMER: 
+			//		// process the 10-second timer 
+
+			//		 return 0;
+			//}
+			app->on_timer(hWnd, wParam);
+			break;
+	}
+
 	if(!app->renderer)
 		return DefWindowProc(hWnd, msg, wParam, lParam);
 
@@ -43,6 +59,63 @@ nu_app::nu_app(const string_t &title) : title(title), renderer(0), pos(0, 0), po
 
 nu_app::~nu_app()
 {
+}
+
+void nu_app::start_animation(HWND hWnd)
+{
+	animation.active = true;
+	animation.id = ANIMATION_TIMER;
+	//animation.time = 5000;
+	animation.direction = NU_ANIMATION_HOR_NEGATIVE;
+	animation.current_frame = 0;
+	animation.frames_num = windows[hWnd].h / (animation.fps * 1000 / animation.time);
+
+	RECT desktop_work_area_rect;
+	SystemParametersInfo(SPI_GETWORKAREA, 0, &desktop_work_area_rect, 0);
+
+	uint32_t desktop_work_area_width  = desktop_work_area_rect.right - desktop_work_area_rect.left;
+	uint32_t desktop_work_area_height = desktop_work_area_rect.bottom - desktop_work_area_rect.top;
+
+	switch(animation.direction)
+	{
+		case NU_ANIMATION_HOR_POSITIVE: windows[hWnd].x = desktop_work_area_rect.left - windows[hWnd].w; break;
+		case NU_ANIMATION_HOR_NEGATIVE: windows[hWnd].x = desktop_work_area_width; break;
+		case NU_ANIMATION_VER_POSITIVE: windows[hWnd].y = desktop_work_area_rect.top - windows[hWnd].h; break;
+		case NU_ANIMATION_VER_NEGATIVE: windows[hWnd].y = desktop_work_area_height; break;
+	}
+
+	SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, windows[hWnd].w, windows[hWnd].h, 0);
+
+	SetTimer(hWnd, animation.id, animation.fps, NULL);
+}
+
+void nu_app::on_timer(HWND hWnd, UINT_PTR nIDEvent)
+{
+	if(nIDEvent == animation.id)
+	{
+		if(++animation.current_frame > animation.frames_num)
+		{
+			animation.active = false;
+			KillTimer(hWnd, animation.id);
+		}
+		else
+		{
+			RECT window_rect = { 0 };
+			GetWindowRect(hWnd, &window_rect);
+
+			switch(animation.direction)
+			{
+				case NU_ANIMATION_HOR_POSITIVE: windows[hWnd].x += windows[hWnd].w / animation.frames_num; break;
+				case NU_ANIMATION_HOR_NEGATIVE: windows[hWnd].x -= windows[hWnd].w / animation.frames_num; break;
+				case NU_ANIMATION_VER_POSITIVE: windows[hWnd].y += windows[hWnd].h / animation.frames_num; break;
+				case NU_ANIMATION_VER_NEGATIVE: windows[hWnd].y -= windows[hWnd].h / animation.frames_num; break;
+			}
+
+			SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, windows[hWnd].w, windows[hWnd].h, 0);
+
+			ShowWindow(hWnd, SW_SHOWNORMAL);
+		}   
+	}
 }
 
 string_t nu_app::get_process_name()

@@ -153,6 +153,8 @@ bool NowUpdater::create_user(std::string username, std::string password)
 
 	windows[main_window].on_update = CLOSURE(this, &NowUpdater::main_update);
 
+	start_animation(main_window);
+
 	if(options.preload_images)
 	{
 		download_images();
