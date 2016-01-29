@@ -153,7 +153,13 @@ bool NowUpdater::create_user(std::string username, std::string password)
 
 	windows[main_window].on_update = CLOSURE(this, &NowUpdater::main_update);
 
-	start_animation(main_window);
+#define ANIMATION_TIMER 1234
+
+	nu_animation animation;
+	animation.id = ANIMATION_TIMER;
+	//animation.time = 5000;
+	animation.direction = NU_ANIMATION_HOR_NEGATIVE;
+	start_animation(main_window, animation);
 
 	if(options.preload_images)
 	{

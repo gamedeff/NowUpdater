@@ -24,8 +24,6 @@ using Poco::TimerCallback;
 //-----------------------------------------------------------------------------------
 nu_app *app = 0;
 //-----------------------------------------------------------------------------------
-#define ANIMATION_TIMER 1234
-//-----------------------------------------------------------------------------------
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg)
@@ -61,12 +59,9 @@ nu_app::~nu_app()
 {
 }
 
-void nu_app::start_animation(HWND hWnd)
+void nu_app::start_animation(HWND hWnd, nu_animation animation)
 {
 	animation.active = true;
-	animation.id = ANIMATION_TIMER;
-	//animation.time = 5000;
-	animation.direction = NU_ANIMATION_HOR_NEGATIVE;
 	animation.current_frame = 0;
 	animation.frames_num = windows[hWnd].h / (animation.fps * 1000 / animation.time);
 
@@ -86,11 +81,19 @@ void nu_app::start_animation(HWND hWnd)
 
 	SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, windows[hWnd].w, windows[hWnd].h, 0);
 
-	SetTimer(hWnd, animation.id, animation.fps, NULL);
+	windows[hWnd].animations.push_back(animation);
+	windows[hWnd].current_animation = windows[hWnd].animations.size() - 1;
+
+	SetTimer(hWnd, windows[hWnd].animations[windows[hWnd].current_animation].id, windows[hWnd].animations[windows[hWnd].current_animation].fps, NULL);
 }
 
 void nu_app::on_timer(HWND hWnd, UINT_PTR nIDEvent)
 {
+	if(windows[hWnd].animations.empty())
+		return;
+
+	nu_animation &animation = windows[hWnd].animations[windows[hWnd].current_animation];
+
 	if(nIDEvent == animation.id)
 	{
 		if(++animation.current_frame > animation.frames_num)

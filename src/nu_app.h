@@ -18,22 +18,6 @@
 //-----------------------------------------------------------------------------------
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 //-----------------------------------------------------------------------------------
-struct nu_window
-{
-	WNDCLASSEX wc;
-
-	string_t title, classname;
-	uint32_t x, y, w, h;
-
-	RenderView *render_view;
-
-	Closure<bool(nu_window *)> on_update;
-	Closure<bool(nu_window *)> on_gui;
-
-	nu_window() : render_view(0) {}
-	//nu_window(Closure<bool(nu_window *)> on_idle) : render_view(0), on_idle(on_idle) {}
-};
-//-----------------------------------------------------------------------------------
 enum nu_animation_kind
 {
 	NU_ANIMATION_SLIDE,
@@ -58,6 +42,25 @@ struct nu_animation
 	nu_animation() : active(false), id(0), time(1000),  fps(30), current_frame(0), frames_num(0) {}
 };
 //-----------------------------------------------------------------------------------
+struct nu_window
+{
+	WNDCLASSEX wc;
+
+	string_t title, classname;
+	uint32_t x, y, w, h;
+
+	RenderView *render_view;
+
+	std::vector<nu_animation> animations;
+	uint32_t current_animation;
+
+	Closure<bool(nu_window *)> on_update;
+	Closure<bool(nu_window *)> on_gui;
+
+	nu_window() : render_view(0), current_animation(0) {}
+	//nu_window(Closure<bool(nu_window *)> on_idle) : render_view(0), on_idle(on_idle) {}
+};
+//-----------------------------------------------------------------------------------
 struct nu_app
 {
 	string_t title;
@@ -73,8 +76,6 @@ struct nu_app
 	ImVec2 pos;
 
 	uint32_t popup_w, popup_h;
-
-	nu_animation animation;
 
 	Poco::FastMutex mutex;
 
@@ -107,7 +108,7 @@ struct nu_app
 
 	HWND get_window_handle(nu_window *window);
 
-	void start_animation(HWND hWnd);
+	void start_animation(HWND hWnd, nu_animation animation);
 
 	void on_timer(HWND hWnd, UINT_PTR nIDEvent);
 };
