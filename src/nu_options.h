@@ -29,7 +29,7 @@ struct options_t
 
 	bool preload_images;
 
-	uint32_t x, y;
+	int x, y;
 
 	std::string app_name, data_dir, xml_ext;
 

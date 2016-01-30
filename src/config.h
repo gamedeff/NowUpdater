@@ -108,6 +108,7 @@
 //-----------------------------------------------------------------------------------
 #define GW_DEFAULT ((uint32_t) -1)
 #define GW_NOT_FOUND GW_DEFAULT
+#define GW_UNDEFINED GW_DEFAULT
 //-----------------------------------------------------------------------------------
 #define GW_MINIMAL_STACK_STR_LEN						16
 #define GW_MINI_STACK_STR_LEN							64

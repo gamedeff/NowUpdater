@@ -147,19 +147,13 @@ bool NowUpdater::create_user(std::string username, std::string password)
 
 	string_t window_title = options.no_native_windows ? title : GW_A2T(userinfo->username + "'s list ");
 
-	main_window = create_and_show_window(window_title, options.x, options.y, w, h, CLOSURE(this, &NowUpdater::main_ui));
+	//main_window = create_and_show_window_popup(window_title, /*options.x, options.y, */w, h, CLOSURE(this, &NowUpdater::main_ui));
+	//main_window = create_and_show_window(window_title, options.x, options.y, w, h, CLOSURE(this, &NowUpdater::main_ui));
+	main_window = create_and_show_window_center_animated(window_title, /*options.x, options.y, */w, h, CLOSURE(this, &NowUpdater::main_ui));
 	if(!main_window)
 		return false;
 
 	windows[main_window].on_update = CLOSURE(this, &NowUpdater::main_update);
-
-#define ANIMATION_TIMER 1234
-
-	nu_animation animation;
-	animation.id = ANIMATION_TIMER;
-	//animation.time = 5000;
-	animation.direction = NU_ANIMATION_HOR_NEGATIVE;
-	start_animation(main_window, animation);
 
 	if(options.preload_images)
 	{

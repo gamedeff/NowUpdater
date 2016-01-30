@@ -36,10 +36,19 @@ struct nu_animation
 	bool active;
 	uint32_t id;
 	uint32_t time, fps, current_frame, frames_num;
+	uint32_t distance_h, distance_v;
 	nu_animation_kind kind;
 	nu_animation_direction direction;
 
-	nu_animation() : active(false), id(0), time(1000),  fps(30), current_frame(0), frames_num(0) {}
+	nu_animation() : active(false), id(0), time(1000),  fps(30), current_frame(0), frames_num(0), distance_h(0), distance_v(0) {}
+};
+//-----------------------------------------------------------------------------------
+enum nu_window_popup_kind
+{
+	NU_POPUP_BOTTOM_RIGHT,
+	NU_POPUP_BOTTOM_LEFT,
+	NU_POPUP_TOP_LEFT,
+	NU_POPUP_TOP_RIGHT
 };
 //-----------------------------------------------------------------------------------
 struct nu_window
@@ -47,7 +56,8 @@ struct nu_window
 	WNDCLASSEX wc;
 
 	string_t title, classname;
-	uint32_t x, y, w, h;
+	int x, y;
+	uint32_t w, h;
 
 	RenderView *render_view;
 
@@ -90,13 +100,19 @@ struct nu_app
 
 	WNDCLASSEX register_window_class(const char_t *wndclass);
 
-	HWND create_window(const string_t &window_title, const string_t &window_class, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle);
+	HWND create_window(const string_t &window_title, const string_t &window_class, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
 
-	HWND create_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle);
+	HWND create_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
 
-	HWND create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle);
+	HWND create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
 
-	HWND create_and_show_window_center(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_idle);
+	HWND create_and_show_window_center(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
+
+	HWND create_and_show_window_animated(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, nu_animation_direction direction = NU_ANIMATION_VER_NEGATIVE, uint32_t time = 1000);
+
+	HWND create_and_show_window_center_animated(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, nu_animation_direction direction = NU_ANIMATION_VER_NEGATIVE, uint32_t time = 1000);
+
+	HWND create_and_show_window_popup(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, uint32_t time = 1000, nu_window_popup_kind popup_kind = NU_POPUP_BOTTOM_RIGHT);
 
 	void destroy_window(HWND hWnd);
 

@@ -29,13 +29,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	switch(msg)
 	{
 		case WM_TIMER:
-			//switch(wParam) 
-			//{ 
-			//	case ANIMATION_TIMER: 
-			//		// process the 10-second timer 
 
-			//		 return 0;
-			//}
 			app->on_timer(hWnd, wParam);
 			break;
 	}
@@ -61,10 +55,6 @@ nu_app::~nu_app()
 
 void nu_app::start_animation(HWND hWnd, nu_animation animation)
 {
-	animation.active = true;
-	animation.current_frame = 0;
-	animation.frames_num = windows[hWnd].h / (animation.fps * 1000 / animation.time);
-
 	RECT desktop_work_area_rect;
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &desktop_work_area_rect, 0);
 
@@ -73,13 +63,18 @@ void nu_app::start_animation(HWND hWnd, nu_animation animation)
 
 	switch(animation.direction)
 	{
-		case NU_ANIMATION_HOR_POSITIVE: windows[hWnd].x = desktop_work_area_rect.left - windows[hWnd].w; break;
-		case NU_ANIMATION_HOR_NEGATIVE: windows[hWnd].x = desktop_work_area_width; break;
-		case NU_ANIMATION_VER_POSITIVE: windows[hWnd].y = desktop_work_area_rect.top - windows[hWnd].h; break;
-		case NU_ANIMATION_VER_NEGATIVE: windows[hWnd].y = desktop_work_area_height; break;
+		case NU_ANIMATION_HOR_POSITIVE: animation.distance_h = windows[hWnd].x + windows[hWnd].w;          windows[hWnd].x = desktop_work_area_rect.left - windows[hWnd].w; break;
+		case NU_ANIMATION_HOR_NEGATIVE: animation.distance_h = desktop_work_area_width - windows[hWnd].x;  windows[hWnd].x = desktop_work_area_width;					    break;
+		case NU_ANIMATION_VER_POSITIVE: animation.distance_v = windows[hWnd].y + windows[hWnd].h;          windows[hWnd].y = desktop_work_area_rect.top - windows[hWnd].h;  break;
+		case NU_ANIMATION_VER_NEGATIVE: animation.distance_v = desktop_work_area_height - windows[hWnd].y; windows[hWnd].y = desktop_work_area_height;					    break;
 	}
 
 	SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, windows[hWnd].w, windows[hWnd].h, 0);
+
+	animation.active = true;
+
+	animation.current_frame = 0;
+	animation.frames_num = std::max(animation.distance_h, animation.distance_v) / (animation.fps * 1000 / animation.time);
 
 	windows[hWnd].animations.push_back(animation);
 	windows[hWnd].current_animation = windows[hWnd].animations.size() - 1;
@@ -108,10 +103,10 @@ void nu_app::on_timer(HWND hWnd, UINT_PTR nIDEvent)
 
 			switch(animation.direction)
 			{
-				case NU_ANIMATION_HOR_POSITIVE: windows[hWnd].x += windows[hWnd].w / animation.frames_num; break;
-				case NU_ANIMATION_HOR_NEGATIVE: windows[hWnd].x -= windows[hWnd].w / animation.frames_num; break;
-				case NU_ANIMATION_VER_POSITIVE: windows[hWnd].y += windows[hWnd].h / animation.frames_num; break;
-				case NU_ANIMATION_VER_NEGATIVE: windows[hWnd].y -= windows[hWnd].h / animation.frames_num; break;
+				case NU_ANIMATION_HOR_POSITIVE: windows[hWnd].x += animation.distance_h / animation.frames_num; break;
+				case NU_ANIMATION_HOR_NEGATIVE: windows[hWnd].x -= animation.distance_h / animation.frames_num; break;
+				case NU_ANIMATION_VER_POSITIVE: windows[hWnd].y += animation.distance_v / animation.frames_num; break;
+				case NU_ANIMATION_VER_NEGATIVE: windows[hWnd].y -= animation.distance_v / animation.frames_num; break;
 			}
 
 			SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, windows[hWnd].w, windows[hWnd].h, 0);
@@ -275,7 +270,47 @@ HWND nu_app::create_and_show_window_center(const string_t &window_title, uint32_
 	uint32_t desktop_width, desktop_height;
 	get_desktop_size(desktop_width, desktop_height);
 
-	return create_and_show_window(title + _T(": ") + window_title, desktop_width / 2 - w / 2, desktop_height / 2 - h /2, w, h, on_gui);
+	return create_and_show_window(title + _T(": ") + window_title, desktop_width / 2 - w / 2, desktop_height / 2 - h / 2, w, h, on_gui);
+}
+
+HWND nu_app::create_and_show_window_animated(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, nu_animation_direction direction, uint32_t time)
+{
+	nu_animation animation;
+	animation.id = rand();
+	animation.time = time;
+	animation.direction = direction;
+
+	HWND hWnd = create_and_show_window(title + _T(": ") + window_title, x, y, w, h, on_gui);
+	if(!hWnd)
+		return hWnd;
+
+	start_animation(hWnd, animation);
+
+	return hWnd;
+}
+
+HWND nu_app::create_and_show_window_center_animated(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, nu_animation_direction direction, uint32_t time)
+{
+	uint32_t desktop_width, desktop_height;
+	get_desktop_size(desktop_width, desktop_height);
+
+	return create_and_show_window_animated(title + _T(": ") + window_title, desktop_width / 2 - w / 2, desktop_height / 2 - h / 2, w, h, on_gui, direction, time);
+}
+
+HWND nu_app::create_and_show_window_popup(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, uint32_t time, nu_window_popup_kind popup_kind)
+{
+	uint32_t desktop_width, desktop_height;
+	get_desktop_size(desktop_width, desktop_height);
+
+	switch(popup_kind)
+	{
+		case NU_POPUP_BOTTOM_RIGHT: return create_and_show_window_animated(title + _T(": ") + window_title, desktop_width - w, desktop_height - h, w, h, on_gui, NU_ANIMATION_VER_NEGATIVE, time); break;
+		case NU_POPUP_BOTTOM_LEFT:  return create_and_show_window_animated(title + _T(": ") + window_title,                 0, desktop_height - h, w, h, on_gui, NU_ANIMATION_VER_NEGATIVE, time); break;
+		case NU_POPUP_TOP_LEFT:		return create_and_show_window_animated(title + _T(": ") + window_title,                 0, 0,                  w, h, on_gui, NU_ANIMATION_VER_POSITIVE, time); break;
+		case NU_POPUP_TOP_RIGHT:	return create_and_show_window_animated(title + _T(": ") + window_title, desktop_width - w, 0,                  w, h, on_gui, NU_ANIMATION_VER_POSITIVE, time); break;
+	}
+
+	return 0;
 }
 
 void nu_app::destroy_window(HWND hWnd)
