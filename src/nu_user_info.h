@@ -159,6 +159,7 @@ struct user_info_t
 
 	bool search_title(const std::string &title_name, std::vector<title_info_t> &found_titles);
 
+	title_info_t &get_current_site_title(uint32_t i);
 	float get_cover_width(uint32_t i);
 	float get_cover_height(uint32_t i);
 

@@ -25,6 +25,9 @@ struct NowUpdater : public nu_app
 	user_info_t *userinfo;
 
 	HWND choose_user_window, new_user_window, options_window, main_window;
+	std::vector<HWND> popup_windows;
+
+	uint32_t popup_w, popup_h;
 
 	Poco::Thread download_images_thread;
 	Poco::RunnableAdapter<NowUpdater> download_images_thread_adapter;
@@ -44,6 +47,7 @@ struct NowUpdater : public nu_app
 
 	bool create_user(std::string username, std::string password);
 
+	void load_image(uint32_t si, uint32_t i);
 	void load_images();
 	void download_images();
 
@@ -51,6 +55,7 @@ struct NowUpdater : public nu_app
 	bool main_update(nu_window *window);
 
 	void handle_popup(HWND hWnd);
+	bool popup_ui(nu_window *window);
 };
 //-----------------------------------------------------------------------------------
 #endif

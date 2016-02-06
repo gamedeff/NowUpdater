@@ -1098,14 +1098,19 @@ void user_info_t::title_ui(int &current_title_status)
 	ImGui::EndGroup();
 }
 
+title_info_t &user_info_t::get_current_site_title(uint32_t i)
+{
+	return sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[i].index];
+}
+
 float user_info_t::get_cover_width(uint32_t i)
 {
-	return sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[i].index].cover_texture.w * sites[site_users[current_site].site_index]->cover_image_scale_x;
+	return get_current_site_title(i).cover_texture.w * sites[site_users[current_site].site_index]->cover_image_scale_x;
 }
 
 float user_info_t::get_cover_height(uint32_t i)
 {
-	return sites[site_users[current_site].site_index]->titles[site_users[current_site].user_titles[i].index].cover_texture.h * sites[site_users[current_site].site_index]->cover_image_scale_y;
+	return get_current_site_title(i).cover_texture.h * sites[site_users[current_site].site_index]->cover_image_scale_y;
 }
 
 uint32_t user_info_t::get_user_title_index(uint32_t si, const std::string &title_name)

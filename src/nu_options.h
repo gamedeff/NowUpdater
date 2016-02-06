@@ -21,7 +21,7 @@ struct options_t
 
 	bool animate_popup;
 
-	uint32_t popup_delay;
+	uint32_t popup_slide_time, popup_display_time;
 
 	float min_rating, max_rating;
 
@@ -35,7 +35,8 @@ struct options_t
 
 	options_t() : no_native_windows(false),
 				  animate_popup(false),
-				  popup_delay(3000),
+				  popup_slide_time(3000),
+				  popup_display_time(5000),
 				  min_rating(1),
 				  max_rating(10),
 				  mediaplayer_check_delay(5000),

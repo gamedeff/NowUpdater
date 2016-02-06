@@ -570,7 +570,7 @@ bool imdb_site_info_t::send_request_add_title_imdb_list_ajax(site_user_info_t &s
 	std::string imdb_hidden_key;
 
 	if(send_request_get_list_item_id_imdb_list_ajax_watchlist_has(site_user, title, imdb_list, imdb_list_item_id, imdb_hidden_key_name, imdb_hidden_key) != false)
-		return false; // already added
+		return true; // already added
 
 	std::vector<string_pair_t> params;
 	params.push_back(std::make_pair("const", imdb_title_id));

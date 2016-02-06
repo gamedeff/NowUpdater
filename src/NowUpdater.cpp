@@ -34,7 +34,7 @@ template<class T> bool ImGui_Items_StringGetter(void* data, int idx, const char*
 	ImGui::SameLine(); \
 	ImGui::InputText("##" GW_TOSTRING(b), &b[0], b.size());
 //-----------------------------------------------------------------------------------
-NowUpdater::NowUpdater() : nu_app(_T("Now Updater")), current_user(0), userinfo(0), choose_user_window(0), new_user_window(0), options_window(0), main_window(0),
+NowUpdater::NowUpdater() : nu_app(_T("Now Updater")), current_user(0), userinfo(0), choose_user_window(0), new_user_window(0), options_window(0), main_window(0), popup_w(400), popup_h(300),
 														timer(0, options.mediaplayer_check_delay), timer_started(false), download_images_thread_adapter(*this, &NowUpdater::download_images)
 {
 }
@@ -149,7 +149,7 @@ bool NowUpdater::create_user(std::string username, std::string password)
 
 	//main_window = create_and_show_window_popup(window_title, /*options.x, options.y, */w, h, CLOSURE(this, &NowUpdater::main_ui));
 	//main_window = create_and_show_window(window_title, options.x, options.y, w, h, CLOSURE(this, &NowUpdater::main_ui));
-	main_window = create_and_show_window_center_animated(window_title, /*options.x, options.y, */w, h, CLOSURE(this, &NowUpdater::main_ui));
+	main_window = create_and_show_window_center(window_title, /*options.x, options.y, */w, h, CLOSURE(this, &NowUpdater::main_ui));
 	if(!main_window)
 		return false;
 
@@ -180,18 +180,33 @@ void NowUpdater::download_images()
 	}
 }
 
+void NowUpdater::load_image(uint32_t si, uint32_t i)
+{
+	if(!userinfo->sites[userinfo->site_users[si].site_index]->titles[userinfo->site_users[si].user_titles[i].index].cover_texture_data.empty() &&
+	   !userinfo->sites[userinfo->site_users[si].site_index]->titles[userinfo->site_users[si].user_titles[i].index].cover_texture.handle)
+	{
+		renderer->LoadImage(userinfo->sites[userinfo->site_users[si].site_index]->titles[userinfo->site_users[si].user_titles[i].index].cover_texture_data.c_str(),
+							userinfo->sites[userinfo->site_users[si].site_index]->titles[userinfo->site_users[si].user_titles[i].index].cover_texture_data.size(),
+							userinfo->sites[userinfo->site_users[si].site_index]->titles[userinfo->site_users[si].user_titles[i].index].cover_texture);
+	}
+}
+
 void NowUpdater::load_images()
 {
-	for(uint32_t i = 0; i < userinfo->site_users.size(); ++i)
-	{
-		uint32_t si = userinfo->site_users[i].site_index;
+	for(uint32_t si = 0; si < userinfo->site_users.size(); ++si)
+		for(uint32_t i = 0; i < userinfo->site_users[si].user_titles.size(); ++i)
+			load_image(si, i);
+}
 
-		for(uint32_t k = 0; k < userinfo->site_users[i].user_titles.size(); ++k)
-			if(!userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.empty() && !userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture.handle)
-			{
-				renderer->LoadImage(userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.c_str(), userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture_data.size(), userinfo->sites[si]->titles[userinfo->site_users[i].user_titles[k].index].cover_texture);
-			}
-	}
+bool NowUpdater::popup_ui(nu_window *window)
+{
+	//assert(!popup_windows.empty() && == window);
+
+	static int current_title_status = NU_TITLE_STATUS_NOT_ADDED;
+
+	userinfo->title_ui(current_title_status);
+
+	return false;
 }
 
 bool NowUpdater::main_ui(nu_window *window)
@@ -200,7 +215,20 @@ bool NowUpdater::main_ui(nu_window *window)
 
 	userinfo->ui();
 
-	return false;
+	static bool skip_once = false;
+
+	if(userinfo->show_title_popup && !skip_once)
+	{
+		skip_once = true;
+
+		HWND hWnd = get_window_handle(window);
+		if(hWnd)
+			handle_popup(hWnd);
+	}
+	else
+		skip_once = false;
+
+	return skip_once;
 }
 
 bool NowUpdater::main_update(nu_window *window)
@@ -219,10 +247,6 @@ bool NowUpdater::main_update(nu_window *window)
 
 			timer_started = true;
 		}
-
-		HWND hWnd = get_window_handle(window);
-		if(hWnd)
-			handle_popup(hWnd);
 	}
 
 	return false;
@@ -230,57 +254,76 @@ bool NowUpdater::main_update(nu_window *window)
 
 void NowUpdater::handle_popup(HWND hWnd)
 {
-	RECT window_rect = { 0 };
-	GetWindowRect(hWnd, &window_rect);
+	//RECT window_rect = { 0 };
+	//GetWindowRect(hWnd, &window_rect);
 
-	uint32_t desktop_work_area_width, desktop_work_area_height;
-	get_desktop_size(desktop_work_area_width, desktop_work_area_height);
+	//uint32_t desktop_work_area_width, desktop_work_area_height;
+	//get_desktop_size(desktop_work_area_width, desktop_work_area_height);
 
-	uint32_t window_rect_width  = userinfo->show_title_popup ? popup_w : windows[hWnd].w; //window_rect.right - window_rect.left;
-	uint32_t window_rect_height = userinfo->show_title_popup ? userinfo->get_cover_height(userinfo->current_title_index) + ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().ItemSpacing.y/*popup_h*/ : windows[hWnd].h; //window_rect.bottom - window_rect.top;
+	userinfo->current_site = 2;
 
-	window_rect.left = userinfo->show_title_popup ? desktop_work_area_width - window_rect_width : windows[hWnd].x;
-	window_rect.top  = userinfo->show_title_popup ? desktop_work_area_height - window_rect_height : windows[hWnd].y;
-	window_rect.right = window_rect.left + window_rect_width;
-	window_rect.bottom = window_rect.top + window_rect_height;
+	//uint32_t window_rect_width  = userinfo->show_title_popup ? popup_w : windows[hWnd].w; //window_rect.right - window_rect.left;
+	//uint32_t window_rect_height = userinfo->show_title_popup ? popup_h : windows[hWnd].h; //window_rect.bottom - window_rect.top;
 
-	static bool hiden = false;
+	//window_rect.left = userinfo->show_title_popup ? desktop_work_area_width - window_rect_width : windows[hWnd].x;
+	//window_rect.top  = userinfo->show_title_popup ? desktop_work_area_height - window_rect_height : windows[hWnd].y;
+	//window_rect.right = window_rect.left + window_rect_width;
+	//window_rect.bottom = window_rect.top + window_rect_height;
 
-	if(userinfo->show_title_popup)
+	//static bool hiden = false;
+
+	//if(userinfo->show_title_popup)
+	//{
+	if(popup_windows.empty())
 	{
-		AdjustWindowRectEx(&window_rect, GetWindowLong(hWnd, GWL_STYLE), FALSE, GetWindowLong(hWnd, GWL_EXSTYLE));
-
-		window_rect_width  = window_rect.right - window_rect.left;
-		window_rect_height = window_rect.bottom - window_rect.top;
-
-		if(!hiden)
+		if(!download_images_thread.isRunning())
 		{
-			ShowWindow(hWnd, SW_HIDE);
-			hiden = true;
+			userinfo->sites[userinfo->site_users[userinfo->current_site].site_index]->download_title_images(userinfo->site_users[userinfo->current_site].user_titles[userinfo->current_title_index].index);
+			load_image(userinfo->current_site, userinfo->current_title_index);
+
+			popup_h = userinfo->get_cover_height(userinfo->current_title_index) + ImGui::GetStyle().FramePadding.y + ImGui::GetStyle().WindowPadding.y + ImGui::GetStyle().ItemSpacing.y;
 		}
 
-		SetWindowPos(hWnd, /*HWND_TOPMOST*/HWND_TOP, window_rect.left, window_rect.top, window_rect_width, window_rect_height, 0/*SWP_NOREDRAW*//*SWP_HIDEWINDOW*/);
-		if(options.animate_popup)
-			AnimateWindow(hWnd, options.popup_delay, AW_SLIDE | AW_ACTIVATE | AW_VER_NEGATIVE);
-		else
-		{
-			ShowWindow(hWnd, SW_SHOWNORMAL);
-			//Sleep(options.popup_delay);
-		}
-		//UpdateWindow(hWnd);
-	}
-	else if(hiden)
-	{
-		SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, window_rect_width, window_rect_height, 0);
+		HWND popup_window = create_and_show_window_popup(string_t(_T("Please rate \"")) + GW_A2T(userinfo->get_current_site_title(userinfo->current_title_index).name) + string_t(_T("\"")), popup_w, popup_h, CLOSURE(this, &NowUpdater::popup_ui), options.popup_display_time, options.popup_slide_time, NU_POPUP_BOTTOM_RIGHT);
+		if(!popup_window)
+			;
 
-		ShowWindow(hWnd, SW_SHOWNORMAL);
-		hiden = false;
+		popup_windows.push_back(popup_window);
 	}
-	else
-	{
-		windows[hWnd].x = window_rect.left + pos.x;
-		windows[hWnd].y = window_rect.top + pos.y;
-	}
+
+		//AdjustWindowRectEx(&window_rect, GetWindowLong(hWnd, GWL_STYLE), FALSE, GetWindowLong(hWnd, GWL_EXSTYLE));
+
+		//window_rect_width  = window_rect.right - window_rect.left;
+		//window_rect_height = window_rect.bottom - window_rect.top;
+
+		//if(!hiden)
+		//{
+		//	ShowWindow(hWnd, SW_HIDE);
+		//	hiden = true;
+		//}
+
+		//SetWindowPos(hWnd, /*HWND_TOPMOST*/HWND_TOP, window_rect.left, window_rect.top, window_rect_width, window_rect_height, 0/*SWP_NOREDRAW*//*SWP_HIDEWINDOW*/);
+		//if(options.animate_popup)
+		//	AnimateWindow(hWnd, options.popup_delay, AW_SLIDE | AW_ACTIVATE | AW_VER_NEGATIVE);
+		//else
+		//{
+		//	ShowWindow(hWnd, SW_SHOWNORMAL);
+		//	//Sleep(options.popup_delay);
+		//}
+		////UpdateWindow(hWnd);
+	//}
+	//else if(hiden)
+	//{
+	//	SetWindowPos(hWnd, HWND_TOP, windows[hWnd].x, windows[hWnd].y, window_rect_width, window_rect_height, 0);
+
+	//	ShowWindow(hWnd, SW_SHOWNORMAL);
+	//	hiden = false;
+	//}
+	//else
+	//{
+	//	windows[hWnd].x = window_rect.left + pos.x;
+	//	windows[hWnd].y = window_rect.top + pos.y;
+	//}
 }
 
 bool NowUpdater::init()

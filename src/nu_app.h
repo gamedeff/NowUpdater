@@ -20,6 +20,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 //-----------------------------------------------------------------------------------
 enum nu_animation_kind
 {
+	NU_ANIMATION_PAUSE,
 	NU_ANIMATION_SLIDE,
 };
 //-----------------------------------------------------------------------------------
@@ -31,16 +32,28 @@ enum nu_animation_direction
 	NU_ANIMATION_VER_NEGATIVE  // Animates the window from bottom to top
 };
 //-----------------------------------------------------------------------------------
+struct nu_animation_desc
+{
+	nu_animation_kind kind;
+	nu_animation_direction direction;
+	uint32_t distance_h, distance_v;
+
+	nu_animation_desc() {}
+	nu_animation_desc(nu_animation_kind kind, nu_animation_direction direction, uint32_t distance_h, uint32_t distance_v) : kind(kind), direction(direction), distance_h(distance_h), distance_v(distance_v) {}
+};
+//-----------------------------------------------------------------------------------
 struct nu_animation
 {
 	bool active;
 	uint32_t id;
 	uint32_t time, fps, current_frame, frames_num;
-	uint32_t distance_h, distance_v;
 	nu_animation_kind kind;
 	nu_animation_direction direction;
+	uint32_t distance_h, distance_v;
 
-	nu_animation() : active(false), id(0), time(1000),  fps(30), current_frame(0), frames_num(0), distance_h(0), distance_v(0) {}
+	float x, y;
+
+	nu_animation() : active(false), id(0), time(1000), fps(30), current_frame(0), frames_num(0), distance_h(0), distance_v(0), x(0), y(0) {}
 };
 //-----------------------------------------------------------------------------------
 enum nu_window_popup_kind
@@ -85,8 +98,6 @@ struct nu_app
 
 	ImVec2 pos;
 
-	uint32_t popup_w, popup_h;
-
 	Poco::FastMutex mutex;
 
 	nu_app(const string_t &title);
@@ -108,11 +119,7 @@ struct nu_app
 
 	HWND create_and_show_window_center(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
 
-	HWND create_and_show_window_animated(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, nu_animation_direction direction = NU_ANIMATION_VER_NEGATIVE, uint32_t time = 1000);
-
-	HWND create_and_show_window_center_animated(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, nu_animation_direction direction = NU_ANIMATION_VER_NEGATIVE, uint32_t time = 1000);
-
-	HWND create_and_show_window_popup(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, uint32_t time = 1000, nu_window_popup_kind popup_kind = NU_POPUP_BOTTOM_RIGHT);
+	HWND create_and_show_window_popup(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui, uint32_t time = 1000, uint32_t slide_time = 1000, nu_window_popup_kind popup_kind = NU_POPUP_BOTTOM_RIGHT);
 
 	void destroy_window(HWND hWnd);
 
@@ -124,7 +131,17 @@ struct nu_app
 
 	HWND get_window_handle(nu_window *window);
 
-	void start_animation(HWND hWnd, nu_animation animation);
+	void add_animation(HWND hWnd, nu_animation_kind kind, nu_animation_direction direction, uint32_t distance_h, uint32_t distance_v, uint32_t time = 1000);
+
+	void add_animation(HWND hWnd, const nu_animation_desc &animation_desc, uint32_t time = 1000);
+
+	void add_animation_pause(HWND hWnd, uint32_t time = 1000);
+
+	void add_animation_slide_up(HWND hWnd, uint32_t dy, uint32_t time = 1000);
+
+	void add_animation_slide_down(HWND hWnd, uint32_t dy, uint32_t time = 1000);
+
+	void start_animation(HWND hWnd, nu_animation &animation);
 
 	void on_timer(HWND hWnd, UINT_PTR nIDEvent);
 };
