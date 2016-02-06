@@ -111,9 +111,15 @@ struct nu_app
 
 	WNDCLASSEX register_window_class(const char_t *wndclass);
 
+	HWND create_window(const string_t &window_title, const string_t &window_class, bool popup, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
+
 	HWND create_window(const string_t &window_title, const string_t &window_class, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
 
+	HWND create_window(const string_t &window_title, bool popup, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
+
 	HWND create_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
+
+	HWND create_and_show_window(const string_t &window_title, bool popup, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
 
 	HWND create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui);
 

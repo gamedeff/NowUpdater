@@ -214,7 +214,7 @@ WNDCLASSEX nu_app::register_window_class(const char_t *wndclass)
 	return wc;
 }
 
-HWND nu_app::create_window(const string_t &window_title, const string_t &window_class, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
+HWND nu_app::create_window(const string_t &window_title, const string_t &window_class, bool popup, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
 {
 	nu_window window;
 
@@ -228,7 +228,7 @@ HWND nu_app::create_window(const string_t &window_title, const string_t &window_
 	window.on_gui = on_gui;
 
 	// Create application window
-	HWND hWnd = CreateWindow(window.classname.c_str(), window.title.c_str(), options.no_native_windows ? WS_POPUP : WS_OVERLAPPEDWINDOW,
+	HWND hWnd = CreateWindow(window.classname.c_str(), window.title.c_str(), popup ? WS_POPUP : WS_OVERLAPPEDWINDOW,
 							 window.x, window.y, window.w, window.h, NULL, NULL, window.wc.hInstance, NULL);
 
 	if(!hWnd)
@@ -253,7 +253,12 @@ HWND nu_app::create_window(const string_t &window_title, const string_t &window_
 	return hWnd;
 }
 
-HWND nu_app::create_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
+HWND nu_app::create_window(const string_t &window_title, const string_t &window_class, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
+{
+	return create_window(window_title, window_class, options.no_native_windows, x, y, w, h, on_gui);
+}
+
+HWND nu_app::create_window(const string_t &window_title, bool popup, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
 {
 	string_t window_class = string_t(GW_A2T(options.app_name)) +
 
@@ -264,12 +269,17 @@ HWND nu_app::create_window(const string_t &window_title, uint32_t x, uint32_t y,
 #endif
 		string_t(GW_A2T(std::to_string(windows.size() + 1)));
 
-	return create_window(window_title, window_class, x, y, w, h, on_gui);
+	return create_window(window_title, window_class, popup, x, y, w, h, on_gui);
 }
 
-HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
+HWND nu_app::create_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
 {
-	HWND hWnd = create_window(window_title, x, y, w, h, on_gui);
+	return create_window(window_title, options.no_native_windows, x, y, w, h, on_gui);
+}
+
+HWND nu_app::create_and_show_window(const string_t &window_title, bool popup, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
+{
+	HWND hWnd = create_window(window_title, popup, x, y, w, h, on_gui);
 	if(!hWnd)
 		return hWnd;
 
@@ -299,6 +309,11 @@ HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, ui
 	}
 
 	return hWnd;
+}
+
+HWND nu_app::create_and_show_window(const string_t &window_title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
+{
+	return create_and_show_window(window_title, options.no_native_windows, x, y, w, h, on_gui);
 }
 
 HWND nu_app::create_and_show_window_center(const string_t &window_title, uint32_t w, uint32_t h, const Closure<bool(nu_window *)> &on_gui)
@@ -332,7 +347,7 @@ HWND nu_app::create_and_show_window_popup(const string_t &window_title, uint32_t
 		case NU_POPUP_TOP_RIGHT:	x = desktop_work_area_width - w; y = desktop_work_area_rect.top - h; dy = h; from_top = true; break;
 	}
 
-	HWND hWnd = create_and_show_window(window_title, x, y, w, h, on_gui);
+	HWND hWnd = create_and_show_window(window_title, true, x, y, w, h, on_gui);
 	if(!hWnd)
 		return 0;
 
